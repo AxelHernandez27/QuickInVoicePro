@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <androidx.cardview.widget.CardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        app:cardElevation="6dp"
+        app:cardCornerRadius="12dp"
+        android:padding="16dp">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="100dp">
+
+            <!-- Contenedor de textos del producto -->
+            <LinearLayout
+                android:id="@+id/textContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:layout_toStartOf="@+id/btnEditar"
+                android:paddingStart="24dp">
+
+                <TextView
+                    android:id="@+id/tvNombreProducto"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textStyle="bold"
+                    android:textSize="20sp"
+                    android:textColor="#000000"
+                    tools:text="Zapatos Deportivos" />
+
+                <TextView
+                    android:id="@+id/tvPrecioProducto"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="16sp"
+                    android:textColor="#555555"
+                    tools:text="$1,250.00" />
+
+                <TextView
+                    android:id="@+id/tvDescripcionProducto"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="16sp"
+                    android:textColor="#555555"
+                    tools:text="Calzado cómodo para uso diario" />
+
+                <TextView
+                    android:id="@+id/tvCategoriaProducto"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="16sp"
+                    android:textColor="#555555"
+                    tools:text="Deportes" />
+            </LinearLayout>
+
+            <!-- Botón Editar -->
+            <ImageButton
+                android:id="@+id/btnEditar"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:layout_marginEnd="60dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Editar producto"
+                android:src="@android:drawable/ic_menu_edit"
+                android:tint="#FF9800" />
+
+            <!-- Botón Eliminar -->
+            <ImageButton
+                android:id="@+id/btnEliminar"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Eliminar producto"
+                android:src="@android:drawable/ic_menu_delete"
+                android:tint="#F44336" />
+
+        </RelativeLayout>
+    </androidx.cardview.widget.CardView>
+</FrameLayout>
