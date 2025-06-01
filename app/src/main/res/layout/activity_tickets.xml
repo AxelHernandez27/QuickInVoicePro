@@ -38,7 +38,7 @@
             android:layout_gravity="end"
             android:layout_marginBottom="16dp"
             android:backgroundTint="#4CAF50"
-            android:text="Agregar Ticket"
+            android:text="Add Ticket"
             android:textAllCaps="false"
             android:textColor="#FFFFFF"
             android:textSize="16sp" />
@@ -50,7 +50,7 @@
             android:layout_height="50dp"
             android:layout_marginBottom="16dp"
             android:background="@drawable/input_background"
-            android:hint="Buscar ticket"
+            android:hint="Search"
             android:inputType="text"
             android:paddingStart="40dp"
             android:drawableStart="@android:drawable/ic_menu_search"

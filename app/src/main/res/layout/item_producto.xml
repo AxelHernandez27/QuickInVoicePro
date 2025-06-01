@@ -55,13 +55,6 @@
                     android:textColor="#555555"
                     tools:text="Calzado cómodo para uso diario" />
 
-                <TextView
-                    android:id="@+id/tvCategoriaProducto"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textSize="16sp"
-                    android:textColor="#555555"
-                    tools:text="Deportes" />
             </LinearLayout>
 
             <!-- Botón Editar -->
