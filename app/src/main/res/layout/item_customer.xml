@@ -4,8 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    tools:context=".ClientesActivity">
+    android:layout_height="wrap_content">
+    <!--tools:context=".ClientesActivity">-->
 
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
@@ -76,7 +76,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Editar"
                 android:src="@android:drawable/ic_menu_edit"
-                android:tint="#FF9800" />
+                app:tint="#FF9800" />
 
             <!-- Botón Eliminar -->
             <ImageButton
@@ -88,7 +88,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Eliminar"
                 android:src="@android:drawable/ic_menu_delete"
-                android:tint="#F44336" />
+                app:tint="#F44336" />
 
         </RelativeLayout>
     </androidx.cardview.widget.CardView>

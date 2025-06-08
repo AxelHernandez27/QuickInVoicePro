@@ -68,7 +68,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Editar producto"
                 android:src="@android:drawable/ic_menu_edit"
-                android:tint="#FF9800" />
+                app:tint="#FF9800" />
 
             <!-- Botón Eliminar -->
             <ImageButton
@@ -80,7 +80,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Eliminar producto"
                 android:src="@android:drawable/ic_menu_delete"
-                android:tint="#F44336" />
+                app:tint="#F44336" />
 
         </RelativeLayout>
     </androidx.cardview.widget.CardView>

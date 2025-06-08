@@ -67,6 +67,6 @@
             android:paddingTop="8dp"
             android:paddingBottom="8dp"
             tools:itemCount="3"
-            tools:listitem="@layout/item_cliente" />
+            tools:listitem="@layout/item_customer" />
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
