@@ -12,7 +12,7 @@ class LoginActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         FirebaseApp.initializeApp(this)
-        setContentView(R.layout.activity_login) // usa el nombre correcto del layout XML
+        setContentView(R.layout.activity_login)
 
         val loginButton: Button = findViewById(R.id.loginButton)
         loginButton.setOnClickListener {

@@ -26,7 +26,6 @@ class EditCustomerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.form_cliente_editar)
 
-        // Inicializa vistas
         etFullName = findViewById(R.id.etFullName)
         etAddress = findViewById(R.id.etAddress)
         etPhone = findViewById(R.id.etPhone)
@@ -35,7 +34,6 @@ class EditCustomerActivity : AppCompatActivity() {
         btnCancel = findViewById(R.id.btnCancel)
         btnUpdate = findViewById(R.id.btnUpdate)
 
-        // Obtén datos del Intent
         val intent = intent
         customerId = intent.getStringExtra("id") ?: return
         etFullName.setText(intent.getStringExtra("fullname"))

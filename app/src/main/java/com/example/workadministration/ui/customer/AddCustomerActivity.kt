@@ -20,7 +20,7 @@ class AddCustomerActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.form_cliente_agregar) // Asegúrate que este es el nombre del layout
+        setContentView(R.layout.form_cliente_agregar)
 
         etFullName = findViewById(R.id.etFullName)
         etAddress = findViewById(R.id.etAddress)
@@ -64,7 +64,7 @@ class AddCustomerActivity : AppCompatActivity() {
             .add(customer)
             .addOnSuccessListener {
                 Toast.makeText(this, "Customer added", Toast.LENGTH_SHORT).show()
-                setResult(RESULT_OK) // ✅ <- Esto informa que todo salió bien
+                setResult(RESULT_OK)
                 finish()
 
             }

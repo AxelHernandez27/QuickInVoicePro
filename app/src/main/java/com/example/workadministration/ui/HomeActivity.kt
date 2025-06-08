@@ -15,11 +15,9 @@ class HomeActivity : AppCompatActivity() {
         bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_home -> {
-                    // Ya estás en Home, no haces nada
                     true
                 }
                 R.id.nav_customers -> {
-                    // Redirige a CustomerActivity
                     val intent = Intent(this, CustomerActivity::class.java)
                     startActivity(intent)
                     true

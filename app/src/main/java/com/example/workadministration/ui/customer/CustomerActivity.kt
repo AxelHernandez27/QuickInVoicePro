@@ -23,12 +23,10 @@ class CustomerActivity : AppCompatActivity() {
     private val customersList = mutableListOf<Customer>()
     private val db = FirebaseFirestore.getInstance()
 
-    // Nueva forma moderna de recibir resultados
     private val addCustomerLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            // Refresca la lista cuando vuelve con éxito
             obtenerClientes()
         }
     }
@@ -40,7 +38,7 @@ class CustomerActivity : AppCompatActivity() {
         val bottomAdd = findViewById<Button>(R.id.btnAgregarCliente)
         bottomAdd.setOnClickListener {
             val intent = Intent(this, AddCustomerActivity::class.java)
-            addCustomerLauncher.launch(intent) // Aquí usamos el launcher
+            addCustomerLauncher.launch(intent)
         }
 
         recyclerCustomers = findViewById(R.id.recyclerClientes)
