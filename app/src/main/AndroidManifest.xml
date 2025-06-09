@@ -13,9 +13,14 @@
         android:theme="@style/Theme.WorkAdministration"
         tools:targetApi="31">
         <activity android:name=".HomeActivity" />
+
         <activity android:name=".ui.customer.CustomerActivity" />
         <activity android:name=".ui.customer.AddCustomerActivity" />
         <activity android:name=".ui.customer.EditCustomerActivity" />
+
+        <activity android:name=".ui.product.ProductActivity" />
+        <activity android:name=".ui.product.AddProductActivity" />
+        <activity android:name=".ui.product.EditProductActivity" />
 
         <activity
             android:name=".ui.LoginActivity"

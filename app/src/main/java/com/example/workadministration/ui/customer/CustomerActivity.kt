@@ -27,7 +27,7 @@ class CustomerActivity : AppCompatActivity() {
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            obtenerClientes()
+            getCustomers()
         }
     }
 
@@ -35,8 +35,8 @@ class CustomerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_customer)
 
-        val bottomAdd = findViewById<Button>(R.id.btnAgregarCliente)
-        bottomAdd.setOnClickListener {
+        val buttonAdd = findViewById<Button>(R.id.btnAgregarCliente)
+        buttonAdd.setOnClickListener {
             val intent = Intent(this, AddCustomerActivity::class.java)
             addCustomerLauncher.launch(intent)
         }
@@ -61,7 +61,7 @@ class CustomerActivity : AppCompatActivity() {
         recyclerCustomers.layoutManager = LinearLayoutManager(this)
         recyclerCustomers.adapter = adapter
 
-        obtenerClientes()
+        getCustomers()
 
         serchCustomer.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
@@ -73,7 +73,7 @@ class CustomerActivity : AppCompatActivity() {
         })
     }
 
-    private fun obtenerClientes() {
+    private fun getCustomers() {
         db.collection("customers")
             .get()
             .addOnSuccessListener { documents ->

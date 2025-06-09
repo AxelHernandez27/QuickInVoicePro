@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.example.workadministration.ui.customer.CustomerActivity
+import com.example.workadministration.ui.product.ProductActivity
 import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class HomeActivity : AppCompatActivity() {
@@ -15,6 +16,11 @@ class HomeActivity : AppCompatActivity() {
         bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_home -> {
+                    true
+                }
+                R.id.nav_products -> {
+                    val intent = Intent(this, ProductActivity::class.java)
+                    startActivity(intent)
                     true
                 }
                 R.id.nav_customers -> {
