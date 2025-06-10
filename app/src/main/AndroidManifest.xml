@@ -22,6 +22,10 @@
         <activity android:name=".ui.product.AddProductActivity" />
         <activity android:name=".ui.product.EditProductActivity" />
 
+        <activity android:name=".ui.invoice.InvoiceActivity" />
+
+
+
         <activity
             android:name=".ui.LoginActivity"
             android:exported="true"
