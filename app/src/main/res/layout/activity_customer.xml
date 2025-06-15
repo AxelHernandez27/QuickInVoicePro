@@ -5,7 +5,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#FFFFFF">
+    android:background="#FFFFFF"
+    >
 
     <LinearLayout
         android:id="@+id/clientesContainer"
@@ -68,5 +69,17 @@
             android:paddingBottom="8dp"
             tools:itemCount="3"
             tools:listitem="@layout/item_customer" />
+
+
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/bottomNavigation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:background="@color/white"
+            app:itemIconTint="@color/selector_nav"
+            app:itemTextColor="@color/selector_nav"
+            app:menu="@menu/bottom_nav_menu"
+            app:labelVisibilityMode="labeled" />
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

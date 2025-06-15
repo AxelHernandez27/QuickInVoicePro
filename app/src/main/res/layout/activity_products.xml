@@ -58,7 +58,8 @@
             android:paddingStart="40dp"
             android:drawableStart="@android:drawable/ic_menu_search"
             android:textColor="#000000"
-            android:textColorHint="#999999" />
+            android:textColorHint="#999999"
+            />
 
         <!-- Lista de productos -->
         <androidx.recyclerview.widget.RecyclerView
@@ -71,5 +72,15 @@
             android:paddingBottom="8dp"
             tools:itemCount="3"
             tools:listitem="@layout/item_product" />
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/bottomNavigation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom"
+            android:background="@color/white"
+            app:itemIconTint="@color/selector_nav"
+            app:itemTextColor="@color/selector_nav"
+            app:labelVisibilityMode="labeled"
+            app:menu="@menu/bottom_nav_menu" />
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
