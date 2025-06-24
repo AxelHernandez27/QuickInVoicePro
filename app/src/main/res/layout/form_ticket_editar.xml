@@ -2,7 +2,7 @@
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:background="#FFFFFF"
     android:padding="24dp">
 
@@ -16,7 +16,7 @@
             android:id="@+id/tvFormTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Edit Ticket"
+            android:text="Editar Ticket"
             android:textSize="24sp"
             android:textStyle="bold"
             android:textColor="#000000"
@@ -26,79 +26,126 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Select Client"
+            android:text="Cliente"
             android:textSize="16sp"
             android:textColor="#000000"
             android:layout_marginBottom="8dp"/>
 
-        <Spinner
-            android:id="@+id/spinnerClients"
+        <AutoCompleteTextView
+            android:id="@+id/autoCompleteClient"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp" />
+            android:hint="Buscar cliente"
+            android:background="@drawable/input_background"
+            android:padding="12dp"
+            android:textColor="#000000"
+            android:textColorHint="#999999"
+            android:layout_marginBottom="16dp"/>
 
-        <!-- Lista de Productos -->
+        <!-- Seleccionar Producto -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Products"
+            android:text="Productos"
             android:textSize="16sp"
             android:textColor="#000000"
             android:layout_marginBottom="8dp"/>
 
+        <AutoCompleteTextView
+            android:id="@+id/autoCompleteProduct"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Buscar producto"
+            android:background="@drawable/input_background"
+            android:padding="12dp"
+            android:textColor="#000000"
+            android:textColorHint="#999999"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- Lista dinámica de productos -->
         <LinearLayout
             android:id="@+id/layoutProductsContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:layout_marginBottom="16dp">
-            <!-- Aquí se cargarán dinámicamente los productos con sus cantidades y precios para edición -->
-        </LinearLayout>
+            android:layout_marginBottom="16dp"/>
 
-        <Button
-            android:id="@+id/btnAddProduct"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Add Product"
-            android:backgroundTint="#2196F3"
-            android:textColor="#FFFFFF"
-            android:textAllCaps="false"
-            android:layout_marginBottom="24dp"/>
-
-        <!-- Total -->
+        <!-- Subtotal y Total -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="end"
-            android:layout_marginBottom="24dp">
+            android:orientation="vertical"
+            android:layout_marginBottom="16dp">
 
-            <TextView
-                android:id="@+id/tvTotalLabel"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Total:"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="#000000"
-                android:layout_marginEnd="8dp"/>
+                android:orientation="horizontal"
+                android:gravity="end"
+                android:layout_marginBottom="8dp">
 
-            <TextView
-                android:id="@+id/tvTotalAmount"
-                android:layout_width="wrap_content"
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Subtotal:"
+                    android:textSize="16sp"
+                    android:textColor="#000000"
+                    android:layout_marginEnd="8dp"/>
+
+                <TextView
+                    android:id="@+id/tvSubtotalAmount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="$0.00"
+                    android:textSize="16sp"
+                    android:textColor="#000000"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="$0.00"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="#000000"/>
+                android:orientation="horizontal"
+                android:gravity="end">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Total:"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"
+                    android:layout_marginEnd="8dp"/>
+
+                <TextView
+                    android:id="@+id/tvTotalAmount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="$0.00"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="#000000"/>
+            </LinearLayout>
         </LinearLayout>
 
-        <!-- Notas o cargos adicionales -->
+        <!-- Cargos Extra -->
+        <EditText
+            android:id="@+id/etExtraCharges"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Cargos adicionales"
+            android:background="@drawable/input_background"
+            android:padding="12dp"
+            android:inputType="numberDecimal"
+            android:textColor="#000000"
+            android:textColorHint="#999999"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- Notas -->
         <EditText
             android:id="@+id/etAdditionalNotes"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Additional notes or charges"
+            android:hint="Notas adicionales"
             android:background="@drawable/input_background"
             android:padding="12dp"
             android:inputType="textMultiLine"
@@ -118,7 +165,7 @@
                 android:id="@+id/btnCancel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Cancel"
+                android:text="Cancelar"
                 android:backgroundTint="#E41717"
                 android:textColor="#FFFFFF"
                 android:textAllCaps="false"
@@ -128,7 +175,7 @@
                 android:id="@+id/btnSave"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Update"
+                android:text="Actualizar"
                 android:backgroundTint="#F4F019"
                 android:textColor="#FFFFFF"
                 android:textAllCaps="false"/>

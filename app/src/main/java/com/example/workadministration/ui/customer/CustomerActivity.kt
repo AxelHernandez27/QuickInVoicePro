@@ -13,6 +13,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.workadministration.R
+import com.example.workadministration.ui.NavigationUtil
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.firestore.FirebaseFirestore
 
 class CustomerActivity : AppCompatActivity() {
@@ -71,6 +73,10 @@ class CustomerActivity : AppCompatActivity() {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
+
+        // Integración de la navegación
+        val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNavigation)
+        NavigationUtil.setupNavigation(this, bottomNav, R.id.nav_customers)
     }
 
     private fun getCustomers() {

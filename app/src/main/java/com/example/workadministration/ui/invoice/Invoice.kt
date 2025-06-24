@@ -1,5 +1,7 @@
 package com.example.workadministration.ui.invoice
 
+import java.util.Date
+
 data class Invoice (
     val id: String = "",
     val customerId: String = "",
