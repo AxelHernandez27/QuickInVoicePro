@@ -1,18 +1,25 @@
 package com.example.workadministration.ui.invoice
 
+import android.content.Context
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.LayoutInflater
+import android.view.View
 import android.widget.*
-import androidx.appcompat.app.AppCompatActivity
+import androidx.core.widget.addTextChangedListener
 import com.example.workadministration.R
 import com.example.workadministration.ui.customer.Customer
 import com.example.workadministration.ui.product.Product
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 
-class AddInvoiceActivity : AppCompatActivity() {
+class AddInvoiceBottomSheet : BottomSheetDialogFragment() {
+
+    interface OnInvoiceSavedListener {
+        fun onInvoiceSaved()
+    }
+
+    private lateinit var listener: OnInvoiceSavedListener
 
     private lateinit var autoCompleteClient: AutoCompleteTextView
     private lateinit var autoCompleteProduct: AutoCompleteTextView
@@ -33,44 +40,48 @@ class AddInvoiceActivity : AppCompatActivity() {
     private var subtotal = 0.0
     private var extraCharges = 0.0
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.form_ticket_agregar)
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        if (context is OnInvoiceSavedListener) {
+            listener = context
+        } else {
+            throw RuntimeException("$context must implement OnInvoiceSavedListener")
+        }
+    }
 
-        autoCompleteClient = findViewById(R.id.autoCompleteClient)
-        autoCompleteProduct = findViewById(R.id.autoCompleteProduct)
-        layoutProductsContainer = findViewById(R.id.layoutProductsContainer)
-        tvSubtotalAmount = findViewById(R.id.tvSubtotalAmount)
-        tvTotalAmount = findViewById(R.id.tvTotalAmount)
-        etAdditionalNotes = findViewById(R.id.etAdditionalNotes)
-        etExtraCharges = findViewById(R.id.etExtraCharges)
-        btnSave = findViewById(R.id.btnSave)
-        btnCancel = findViewById(R.id.btnCancel)
+    override fun onCreateView(inflater: LayoutInflater, container: android.view.ViewGroup?, savedInstanceState: Bundle?): View? {
+        val view = inflater.inflate(R.layout.form_ticket_agregar, container, false)
+
+        autoCompleteClient = view.findViewById(R.id.autoCompleteClient)
+        autoCompleteProduct = view.findViewById(R.id.autoCompleteProduct)
+        layoutProductsContainer = view.findViewById(R.id.layoutProductsContainer)
+        tvSubtotalAmount = view.findViewById(R.id.tvSubtotalAmount)
+        tvTotalAmount = view.findViewById(R.id.tvTotalAmount)
+        etAdditionalNotes = view.findViewById(R.id.etAdditionalNotes)
+        etExtraCharges = view.findViewById(R.id.etExtraCharges)
+        btnSave = view.findViewById(R.id.btnSave)
+        btnCancel = view.findViewById(R.id.btnCancel)
 
         loadClients()
         loadProducts()
 
-        etExtraCharges.addTextChangedListener(object : TextWatcher {
-            override fun afterTextChanged(s: Editable?) {
-                extraCharges = s.toString().toDoubleOrNull() ?: 0.0
-                updateTotal()
-            }
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
-        })
+        etExtraCharges.addTextChangedListener {
+            extraCharges = it.toString().toDoubleOrNull() ?: 0.0
+            updateTotal()
+        }
 
         btnSave.setOnClickListener { saveInvoice() }
-        btnCancel.setOnClickListener { finish() }
+        btnCancel.setOnClickListener { dismiss() }
+
+        return view
     }
 
     private fun loadClients() {
         db.collection("customers").get()
             .addOnSuccessListener { documents ->
-                allCustomers = documents.map { doc ->
-                    doc.toObject(Customer::class.java).copy(id = doc.id)
-                }
+                allCustomers = documents.map { it.toObject(Customer::class.java).copy(id = it.id) }
                 val names = allCustomers.map { it.fullname }
-                val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, names)
+                val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, names)
                 autoCompleteClient.setAdapter(adapter)
 
                 autoCompleteClient.setOnItemClickListener { _, _, position, _ ->
@@ -79,29 +90,20 @@ class AddInvoiceActivity : AppCompatActivity() {
                 }
 
                 autoCompleteClient.setOnClickListener {
-                    if (autoCompleteClient.adapter != null) {
-                        autoCompleteClient.showDropDown()
-                    }
+                    if (autoCompleteClient.adapter != null) autoCompleteClient.showDropDown()
                 }
                 autoCompleteClient.setOnFocusChangeListener { _, hasFocus ->
-                    if (hasFocus && autoCompleteClient.adapter != null) {
-                        autoCompleteClient.showDropDown()
-                    }
+                    if (hasFocus && autoCompleteClient.adapter != null) autoCompleteClient.showDropDown()
                 }
-            }
-            .addOnFailureListener {
-                Toast.makeText(this, "Error loading clients", Toast.LENGTH_SHORT).show()
             }
     }
 
     private fun loadProducts() {
         db.collection("products").get()
             .addOnSuccessListener { documents ->
-                allProducts = documents.map { doc ->
-                    doc.toObject(Product::class.java).copy(id = doc.id)
-                }
+                allProducts = documents.map { it.toObject(Product::class.java).copy(id = it.id) }
                 val productNames = allProducts.map { it.name }
-                val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, productNames)
+                val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, productNames)
                 autoCompleteProduct.setAdapter(adapter)
 
                 autoCompleteProduct.setOnItemClickListener { _, _, position, _ ->
@@ -116,23 +118,16 @@ class AddInvoiceActivity : AppCompatActivity() {
                 }
 
                 autoCompleteProduct.setOnClickListener {
-                    if (autoCompleteProduct.adapter != null) {
-                        autoCompleteProduct.showDropDown()
-                    }
+                    if (autoCompleteProduct.adapter != null) autoCompleteProduct.showDropDown()
                 }
                 autoCompleteProduct.setOnFocusChangeListener { _, hasFocus ->
-                    if (hasFocus && autoCompleteProduct.adapter != null) {
-                        autoCompleteProduct.showDropDown()
-                    }
+                    if (hasFocus && autoCompleteProduct.adapter != null) autoCompleteProduct.showDropDown()
                 }
-            }
-            .addOnFailureListener {
-                Toast.makeText(this, "Error loading products", Toast.LENGTH_SHORT).show()
             }
     }
 
     private fun addProductView(product: Product) {
-        val view = LayoutInflater.from(this).inflate(R.layout.item_invoice_product, layoutProductsContainer, false)
+        val view = LayoutInflater.from(requireContext()).inflate(R.layout.item_invoice_product, layoutProductsContainer, false)
         view.findViewById<TextView>(R.id.tvProductName).text = product.name
         view.findViewById<TextView>(R.id.tvProductPrice).text = "$%.2f".format(product.price)
         val btnDelete = view.findViewById<ImageButton>(R.id.btnDeleteProduct)
@@ -155,11 +150,11 @@ class AddInvoiceActivity : AppCompatActivity() {
 
     private fun saveInvoice() {
         if (selectedCustomer == null) {
-            Toast.makeText(this, "Please select a client", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Please select a client", Toast.LENGTH_SHORT).show()
             return
         }
         if (selectedProducts.isEmpty()) {
-            Toast.makeText(this, "Please add at least one product", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Please add at least one product", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -189,12 +184,14 @@ class AddInvoiceActivity : AppCompatActivity() {
                     )
                     detailsCollection.add(detail)
                 }
-                Toast.makeText(this, "Invoice saved", Toast.LENGTH_SHORT).show()
-                setResult(RESULT_OK)
-                finish()
+                Toast.makeText(requireContext(), "Invoice saved successfully", Toast.LENGTH_SHORT).show()
+                listener.onInvoiceSaved()
+                dismiss()
             }
             .addOnFailureListener {
-                Toast.makeText(this, "Error saving invoice", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Error saving invoice", Toast.LENGTH_SHORT).show()
             }
     }
+
+    override fun getTheme(): Int = R.style.CustomBottomSheetDialogTheme
 }

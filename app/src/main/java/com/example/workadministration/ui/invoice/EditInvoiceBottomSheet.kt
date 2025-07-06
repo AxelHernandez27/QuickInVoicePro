@@ -1,18 +1,30 @@
-/*package com.example.workadministration.ui.invoice
+package com.example.workadministration.ui.invoice
 
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import android.widget.*
-import androidx.appcompat.app.AppCompatActivity
 import com.example.workadministration.R
 import com.example.workadministration.ui.customer.Customer
 import com.example.workadministration.ui.product.Product
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 
-class EditInvoiceActivity : AppCompatActivity() {
+class EditInvoiceBottomSheet : BottomSheetDialogFragment() {
+
+    interface OnInvoiceUpdatedListener {
+        fun onInvoiceUpdated()
+    }
+
+    private var listener: OnInvoiceUpdatedListener? = null
+
+    fun setOnInvoiceUpdatedListener(listener: OnInvoiceUpdatedListener) {
+        this.listener = listener
+    }
 
     private lateinit var autoCompleteClient: AutoCompleteTextView
     private lateinit var autoCompleteProduct: AutoCompleteTextView
@@ -35,31 +47,45 @@ class EditInvoiceActivity : AppCompatActivity() {
 
     private var invoiceId: String? = null
 
+    companion object {
+        private const val ARG_INVOICE_ID = "invoiceId"
+
+        fun newInstance(invoiceId: String): EditInvoiceBottomSheet {
+            val fragment = EditInvoiceBottomSheet()
+            val bundle = Bundle()
+            bundle.putString(ARG_INVOICE_ID, invoiceId)
+            fragment.arguments = bundle
+            return fragment
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.form_ticket_editar)
-
-        invoiceId = intent.getStringExtra("invoiceId")
-
+        invoiceId = arguments?.getString(ARG_INVOICE_ID)
         if (invoiceId == null) {
-            Toast.makeText(this, "Invoice ID missing", Toast.LENGTH_SHORT).show()
-            finish()
-            return
+            dismiss()
+        }
+    }
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        val view = inflater.inflate(R.layout.form_ticket_editar, container, false)
+
+        autoCompleteClient = view.findViewById(R.id.autoCompleteClient)
+        autoCompleteProduct = view.findViewById(R.id.autoCompleteProduct)
+        layoutProductsContainer = view.findViewById(R.id.layoutProductsContainer)
+        tvSubtotalAmount = view.findViewById(R.id.tvSubtotalAmount)
+        tvTotalAmount = view.findViewById(R.id.tvTotalAmount)
+        etAdditionalNotes = view.findViewById(R.id.etAdditionalNotes)
+        etExtraCharges = view.findViewById(R.id.etExtraCharges)
+        btnSave = view.findViewById(R.id.btnSave)
+        btnCancel = view.findViewById(R.id.btnCancel)
+
+        loadClients() {
+            loadProducts() {
+                loadInvoiceData()
+            }
         }
 
-        autoCompleteClient = findViewById(R.id.autoCompleteClient)
-        autoCompleteProduct = findViewById(R.id.autoCompleteProduct)
-        layoutProductsContainer = findViewById(R.id.layoutProductsContainer)
-        tvSubtotalAmount = findViewById(R.id.tvSubtotalAmount)
-        tvTotalAmount = findViewById(R.id.tvTotalAmount)
-        etAdditionalNotes = findViewById(R.id.etAdditionalNotes)
-        etExtraCharges = findViewById(R.id.etExtraCharges)
-        btnSave = findViewById(R.id.btnSave)
-        btnCancel = findViewById(R.id.btnCancel)
-
-        loadClients()
-        loadProducts()
-        loadInvoiceData()
 
         etExtraCharges.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
@@ -71,16 +97,18 @@ class EditInvoiceActivity : AppCompatActivity() {
         })
 
         btnSave.setOnClickListener { updateInvoice() }
-        btnCancel.setOnClickListener { finish() }
+        btnCancel.setOnClickListener { dismiss() }
+
+        return view
     }
 
-    private fun loadClients() {
+    private fun loadClients(onComplete: () -> Unit) {
         db.collection("customers").get().addOnSuccessListener { documents ->
             allCustomers = documents.map { doc ->
                 doc.toObject(Customer::class.java).copy(id = doc.id)
             }
             val names = allCustomers.map { it.fullname }
-            val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, names)
+            val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, names)
             autoCompleteClient.setAdapter(adapter)
 
             autoCompleteClient.setOnItemClickListener { _, _, position, _ ->
@@ -94,16 +122,18 @@ class EditInvoiceActivity : AppCompatActivity() {
             autoCompleteClient.setOnFocusChangeListener { _, hasFocus ->
                 if (hasFocus) autoCompleteClient.showDropDown()
             }
+
+            onComplete()
         }
     }
 
-    private fun loadProducts() {
+    private fun loadProducts(onComplete: () -> Unit) {
         db.collection("products").get().addOnSuccessListener { documents ->
             allProducts = documents.map { doc ->
                 doc.toObject(Product::class.java).copy(id = doc.id)
             }
             val productNames = allProducts.map { it.name }
-            val adapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, productNames)
+            val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, productNames)
             autoCompleteProduct.setAdapter(adapter)
 
             autoCompleteProduct.setOnItemClickListener { _, _, position, _ ->
@@ -123,37 +153,42 @@ class EditInvoiceActivity : AppCompatActivity() {
             autoCompleteProduct.setOnFocusChangeListener { _, hasFocus ->
                 if (hasFocus) autoCompleteProduct.showDropDown()
             }
+
+            onComplete()
         }
     }
 
+
     private fun loadInvoiceData() {
-        db.collection("invoices").document(invoiceId!!).get().addOnSuccessListener { doc ->
-            val customerName = doc.getString("customerName") ?: ""
-            autoCompleteClient.setText(customerName)
-            selectedCustomer = allCustomers.find { it.fullname == customerName }
+        invoiceId?.let { id ->
+            db.collection("invoices").document(id).get().addOnSuccessListener { doc ->
+                val customerName = doc.getString("customerName") ?: ""
+                autoCompleteClient.setText(customerName)
+                selectedCustomer = allCustomers.find { it.fullname == customerName }
 
-            etAdditionalNotes.setText(doc.getString("notes") ?: "")
-            extraCharges = doc.getDouble("extraCharges") ?: 0.0
-            etExtraCharges.setText(extraCharges.toString())
+                etAdditionalNotes.setText(doc.getString("notes") ?: "")
+                extraCharges = doc.getDouble("extraCharges") ?: 0.0
+                etExtraCharges.setText(extraCharges.toString())
 
-            db.collection("invoices").document(invoiceId!!).collection("invoiceDetails")
-                .get().addOnSuccessListener { details ->
-                    details.forEach { detailDoc ->
-                        val product = Product(
-                            id = detailDoc.getString("productId") ?: "",
-                            name = detailDoc.getString("name") ?: "",
-                            price = detailDoc.getDouble("price") ?: 0.0
-                        )
-                        selectedProducts.add(product)
-                        addProductView(product)
+                db.collection("invoices").document(id).collection("invoiceDetails")
+                    .get().addOnSuccessListener { details ->
+                        details.forEach { detailDoc ->
+                            val product = Product(
+                                id = detailDoc.getString("productId") ?: "",
+                                name = detailDoc.getString("name") ?: "",
+                                price = detailDoc.getDouble("price") ?: 0.0
+                            )
+                            selectedProducts.add(product)
+                            addProductView(product)
+                        }
+                        updateTotal()
                     }
-                    updateTotal()
-                }
+            }
         }
     }
 
     private fun addProductView(product: Product) {
-        val view = LayoutInflater.from(this).inflate(R.layout.item_invoice_product, layoutProductsContainer, false)
+        val view = LayoutInflater.from(requireContext()).inflate(R.layout.item_invoice_product, layoutProductsContainer, false)
         view.findViewById<TextView>(R.id.tvProductName).text = product.name
         view.findViewById<TextView>(R.id.tvProductPrice).text = "$%.2f".format(product.price)
         val btnDelete = view.findViewById<ImageButton>(R.id.btnDeleteProduct)
@@ -176,11 +211,11 @@ class EditInvoiceActivity : AppCompatActivity() {
 
     private fun updateInvoice() {
         if (selectedCustomer == null) {
-            Toast.makeText(this, "Please select a client", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Please select a client", Toast.LENGTH_SHORT).show()
             return
         }
         if (selectedProducts.isEmpty()) {
-            Toast.makeText(this, "Please add at least one product", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), "Please add at least one product", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -196,31 +231,29 @@ class EditInvoiceActivity : AppCompatActivity() {
             "total" to total
         )
 
-        db.collection("invoices").document(invoiceId!!)
-            .set(invoiceData, SetOptions.merge())
-            .addOnSuccessListener {
-                val detailsRef = db.collection("invoices").document(invoiceId!!).collection("invoiceDetails")
-
-                // Primero eliminamos los detalles existentes
-                detailsRef.get().addOnSuccessListener { existing ->
-                    existing.forEach { it.reference.delete() }
-
-                    selectedProducts.forEach { product ->
-                        val detail = mapOf(
-                            "productId" to product.id,
-                            "name" to product.name,
-                            "price" to product.price
-                        )
-                        detailsRef.add(detail)
+        invoiceId?.let { id ->
+            db.collection("invoices").document(id)
+                .set(invoiceData, SetOptions.merge())
+                .addOnSuccessListener {
+                    val detailsRef = db.collection("invoices").document(id).collection("invoiceDetails")
+                    detailsRef.get().addOnSuccessListener { existing ->
+                        existing.forEach { it.reference.delete() }
+                        selectedProducts.forEach { product ->
+                            val detail = mapOf(
+                                "productId" to product.id,
+                                "name" to product.name,   // CORREGIDO: usar productName consistente
+                                "price" to product.price
+                            )
+                            detailsRef.add(detail)
+                        }
+                        Toast.makeText(requireContext(), "Invoice updated", Toast.LENGTH_SHORT).show()
+                        listener?.onInvoiceUpdated()  // Avisar Activity que se actualizó
+                        dismiss()
                     }
-                    Toast.makeText(this, "Invoice updated", Toast.LENGTH_SHORT).show()
-                    setResult(RESULT_OK)
-                    finish()
                 }
-            }
-            .addOnFailureListener {
-                Toast.makeText(this, "Error updating invoice", Toast.LENGTH_SHORT).show()
-            }
+                .addOnFailureListener {
+                    Toast.makeText(requireContext(), "Error updating invoice", Toast.LENGTH_SHORT).show()
+                }
+        }
     }
 }
-*/

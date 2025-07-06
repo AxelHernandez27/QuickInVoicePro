@@ -23,13 +23,15 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 
-class InvoiceActivity : AppCompatActivity() {
+class InvoiceActivity : AppCompatActivity(), AddInvoiceBottomSheet.OnInvoiceSavedListener {
+
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var searchInvoice: EditText
     private lateinit var adapter: InvoiceAdapter
     private val invoiceList = mutableListOf<Invoice>()
     private val db = FirebaseFirestore.getInstance()
+
 
     private val addInvoiceLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -53,12 +55,14 @@ class InvoiceActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_tickets)
 
-        val buttonAdd = findViewById<Button>(R.id.btnAgregarTicket)
-        buttonAdd.setOnClickListener {
-            val intent = Intent(this, AddInvoiceActivity::class.java)
-            addInvoiceLauncher.launch(intent)
+        val btnAgregar = findViewById<Button>(R.id.btnAgregarTicket)
+        btnAgregar.setOnClickListener {
+            val bottomSheet = AddInvoiceBottomSheet()
+            bottomSheet.show(supportFragmentManager, "AddInvoiceBottomSheet")
         }
 
+        recyclerView = findViewById(R.id.recyclerTickets)
+        recyclerView = findViewById(R.id.recyclerTickets)
         recyclerView = findViewById(R.id.recyclerTickets)
         recyclerView.layoutManager = LinearLayoutManager(this)
 
@@ -71,6 +75,7 @@ class InvoiceActivity : AppCompatActivity() {
 
         recyclerView.adapter = adapter
         searchInvoice = findViewById(R.id.buscarTicket)
+
 
         getInvoices()
 
@@ -87,6 +92,11 @@ class InvoiceActivity : AppCompatActivity() {
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNavigation)
         NavigationUtil.setupNavigation(this, bottomNav, R.id.nav_tickets)
     }
+
+    override fun onInvoiceSaved() {
+        getInvoices()
+    }
+
 
     private fun getInvoices() {
         val db = FirebaseFirestore.getInstance()
@@ -154,10 +164,15 @@ class InvoiceActivity : AppCompatActivity() {
     }
 
     private fun openEditScreen(invoice: Invoice) {
-        val intent = Intent(this, EditInvoiceActivity::class.java)
-        intent.putExtra("invoiceId", invoice.id)
-        editInvoiceLauncher.launch(intent)
+        val editInvoiceSheet = EditInvoiceBottomSheet.newInstance(invoice.id)
+        editInvoiceSheet.setOnInvoiceUpdatedListener(object : EditInvoiceBottomSheet.OnInvoiceUpdatedListener {
+            override fun onInvoiceUpdated() {
+                getInvoices()
+            }
+        })
+        editInvoiceSheet.show(supportFragmentManager, "EditInvoiceBottomSheet")
     }
+
 
     private fun deleteInvoice(invoice: Invoice) {
         db.collection("invoices").document(invoice.id)

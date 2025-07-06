@@ -38,7 +38,7 @@
             android:layout_height="50dp"
             android:layout_gravity="end"
             android:layout_marginBottom="16dp"
-            android:backgroundTint="#4CAF50"
+            android:background="@drawable/btn_green_rounded"
             android:text="Add Ticket"
             android:textAllCaps="false"
             android:textColor="#FFFFFF"

@@ -19,28 +19,40 @@ object NavigationUtil {
             when (item.itemId) {
                 R.id.nav_home -> {
                     if (currentMenuId != R.id.nav_home) {
-                        activity.startActivity(Intent(activity, HomeActivity::class.java))
+                        val intent = Intent(activity, HomeActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                        activity.startActivity(intent)
+                        activity.overridePendingTransition(0, 0)  // Sin animación
                         activity.finish()
                     }
                     true
                 }
                 R.id.nav_products -> {
                     if (currentMenuId != R.id.nav_products) {
-                        activity.startActivity(Intent(activity, ProductActivity::class.java))
+                        val intent = Intent(activity, ProductActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                        activity.startActivity(intent)
+                        activity.overridePendingTransition(0, 0)
                         activity.finish()
                     }
                     true
                 }
                 R.id.nav_customers -> {
                     if (currentMenuId != R.id.nav_customers) {
-                        activity.startActivity(Intent(activity, CustomerActivity::class.java))
+                        val intent = Intent(activity, CustomerActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                        activity.startActivity(intent)
+                        activity.overridePendingTransition(0, 0)
                         activity.finish()
                     }
                     true
                 }
                 R.id.nav_tickets -> {
                     if (currentMenuId != R.id.nav_tickets) {
-                        activity.startActivity(Intent(activity, InvoiceActivity::class.java))
+                        val intent = Intent(activity, InvoiceActivity::class.java)
+                        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                        activity.startActivity(intent)
+                        activity.overridePendingTransition(0, 0)
                         activity.finish()
                     }
                     true

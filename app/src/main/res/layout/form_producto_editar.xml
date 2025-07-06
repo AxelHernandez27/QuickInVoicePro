@@ -74,7 +74,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Cancel"
-                android:backgroundTint="#DB1A1A"
+                android:background="@drawable/rounded_button_red"
                 android:textColor="#FFFFFF"
                 android:textAllCaps="false"
                 android:layout_marginEnd="8dp"/>
@@ -84,7 +84,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Update"
-                android:backgroundTint="#F4F019"
+                android:background="@drawable/rounded_button_yellow"
                 android:textColor="#FFFFFF"
                 android:textAllCaps="false"/>
         </LinearLayout>

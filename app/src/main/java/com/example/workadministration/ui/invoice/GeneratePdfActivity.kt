@@ -87,12 +87,19 @@ class GeneratePdfActivity : AppCompatActivity() {
         val canvas = page.canvas
         val paint = Paint()
 
-        var yPosition = 40f
-
+        // Marca de agua
         val logo = BitmapFactory.decodeResource(resources, R.drawable.logo1)
-        val scaledLogo = Bitmap.createScaledBitmap(logo, 100, 100, false)
-        canvas.drawBitmap(scaledLogo, (pageWidth - 100) / 2f, yPosition, null)
-        yPosition += 120f
+        val scaledWatermark = Bitmap.createScaledBitmap(logo, 300, 300, false)
+
+        val watermarkPaint = Paint()
+        watermarkPaint.alpha = 30 // Transparencia (0 - 255)
+
+        // Centrar marca de agua
+        val watermarkX = (pageWidth - scaledWatermark.width) / 2f
+        val watermarkY = (pageHeight - scaledWatermark.height) / 2f
+
+        canvas.drawBitmap(scaledWatermark, watermarkX, watermarkY, watermarkPaint)
+        var yPosition = 40f
 
         // Título con subrayado azul
         paint.textAlign = Paint.Align.CENTER

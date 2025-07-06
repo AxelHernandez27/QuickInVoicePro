@@ -155,7 +155,7 @@
             <Button
                 android:id="@+id/btnCancel"
                 android:text="Cancel"
-                android:backgroundTint="#E41717"
+                android:background="@drawable/rounded_button_red"
                 android:textColor="#FFFFFF"
                 android:textAllCaps="false"
                 android:layout_marginEnd="8dp"
@@ -165,7 +165,7 @@
             <Button
                 android:id="@+id/btnSave"
                 android:text="Save"
-                android:backgroundTint="#4CAF50"
+                android:background="@drawable/rounded_button_green"
                 android:textColor="#FFFFFF"
                 android:textAllCaps="false"
                 android:layout_width="wrap_content"

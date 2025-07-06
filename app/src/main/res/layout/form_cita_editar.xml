@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#FFFFFF"
@@ -14,53 +13,56 @@
 
         <!-- Título -->
         <TextView
-            android:id="@+id/tituloFormulario"
+            android:id="@+id/tvFormTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Add Product"
+            android:text="Editar Cita"
             android:textSize="24sp"
             android:textStyle="bold"
             android:textColor="#000000"
             android:layout_marginBottom="24dp" />
 
-        <!-- Nombre -->
-        <EditText
-            android:id="@+id/etNombreProducto"
+        <!-- Seleccionar Cliente -->
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Product name"
+            android:text="Cliente"
+            android:textSize="16sp"
+            android:textColor="#000000"
+            android:layout_marginBottom="8dp"/>
+
+        <AutoCompleteTextView
+            android:id="@+id/autoCompleteClient"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Buscar cliente"
             android:background="@drawable/input_background"
             android:padding="12dp"
             android:textColor="#000000"
             android:textColorHint="#999999"
             android:layout_marginBottom="16dp"/>
 
-        <!-- Precio -->
-        <EditText
-            android:id="@+id/etPrecioProducto"
+        <!-- Fecha de cita -->
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Price"
-            android:inputType="numberDecimal"
-            android:background="@drawable/input_background"
-            android:padding="12dp"
+            android:text="Fecha y Hora"
+            android:textSize="16sp"
             android:textColor="#000000"
-            android:textColorHint="#999999"
-            android:layout_marginBottom="16dp"/>
+            android:layout_marginBottom="8dp"/>
 
-        <!-- Descripción -->
         <EditText
-            android:id="@+id/etDescripcionProducto"
+            android:id="@+id/etDateTime"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Description"
+            android:hint="Selecciona fecha y hora"
             android:background="@drawable/input_background"
             android:padding="12dp"
-            android:inputType="textMultiLine"
-            android:minLines="3"
+            android:focusable="false"
+            android:clickable="true"
             android:textColor="#000000"
             android:textColorHint="#999999"
-            android:layout_marginBottom="16dp"/>
+            android:layout_marginBottom="24dp"/>
 
         <!-- Botones -->
         <LinearLayout
@@ -70,23 +72,24 @@
             android:gravity="end">
 
             <Button
-                android:id="@+id/btnCancelar"
+                android:id="@+id/btnCancel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Cancel"
+                android:text="Cancelar"
                 android:background="@drawable/rounded_button_red"
                 android:textColor="#FFFFFF"
                 android:textAllCaps="false"
                 android:layout_marginEnd="8dp"/>
 
             <Button
-                android:id="@+id/btnGuardar"
+                android:id="@+id/btnSave"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Save"
-                android:background="@drawable/rounded_button_green"
+                android:text="Actualizar"
+                android:background="@drawable/rounded_button_yellow"
                 android:textColor="#FFFFFF"
                 android:textAllCaps="false"/>
         </LinearLayout>
+
     </LinearLayout>
 </ScrollView>

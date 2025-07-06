@@ -2,6 +2,7 @@
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#FFFFFF"
@@ -28,11 +29,46 @@
             android:textSize="22sp"
             android:textStyle="bold" />
 
+        <!-- Botón Agregar Cita alineado a la derecha -->
+        <Button
+            android:id="@+id/btnAgregarCita"
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:layout_gravity="end"
+            android:layout_marginBottom="16dp"
+            android:paddingHorizontal="20dp"
+            android:text="Add Appointment"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:textSize="16sp"
+            android:background="@drawable/btn_green_rounded"
+            android:elevation="4sp" />
+
+        <!-- Search Field -->
+        <EditText
+            android:id="@+id/buscarCita"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/input_background"
+            android:hint="Search"
+            android:inputType="text"
+            android:paddingStart="40dp"
+            android:drawableStart="@android:drawable/ic_menu_search"
+            android:textColor="#000000"
+            android:textColorHint="#999999"
+            />
+
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/citasRecyclerView"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1" />
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            tools:itemCount="3"
+            tools:listitem="@layout/item_cita" />
 
         <com.google.android.material.bottomnavigation.BottomNavigationView
             android:id="@+id/bottomNavigation"

@@ -7,7 +7,18 @@
     android:layout_height="match_parent"
     android:background="#FFFFFF">
 
-    <!-- Título alineado arriba a la izquierda -->
+    <LinearLayout
+        android:id="@+id/productosContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="24dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+    <!-- Title -->
     <TextView
         android:id="@+id/tituloProductos"
         android:layout_width="wrap_content"
@@ -16,41 +27,28 @@
         android:textSize="24sp"
         android:textStyle="bold"
         android:textColor="#000000"
-        android:layout_marginTop="24dp"
-        android:layout_marginStart="24dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        android:layout_marginBottom="16dp" />
 
-    <!-- Contenedor principal de productos -->
-    <LinearLayout
-        android:id="@+id/productosContainer"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:orientation="vertical"
-        android:padding="24dp"
-        android:gravity="end"
-        app:layout_constraintTop_toBottomOf="@id/tituloProductos"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <!-- Botón verde -->
+        <!-- Add Product Button Modern Style -->
         <Button
             android:id="@+id/btnAgregarProducto"
             android:layout_width="wrap_content"
-            android:layout_height="50dp"
+            android:layout_height="48dp"
+            android:layout_gravity="end"
             android:layout_marginBottom="16dp"
-            android:backgroundTint="#4CAF50"
+            android:paddingHorizontal="20dp"
             android:text="Add Products"
             android:textAllCaps="false"
             android:textColor="#FFFFFF"
-            android:textSize="16sp" />
+            android:textSize="16sp"
+            android:background="@drawable/btn_green_rounded"
+            android:elevation="4sp" />
 
-        <!-- Buscador -->
+        <!-- Search Field -->
         <EditText
             android:id="@+id/buscarProducto"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
+            android:layout_height="48dp"
             android:layout_marginBottom="16dp"
             android:background="@drawable/input_background"
             android:hint="Search"
@@ -61,7 +59,7 @@
             android:textColorHint="#999999"
             />
 
-        <!-- Lista de productos -->
+        <!-- Product List -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerProductos"
             android:layout_width="match_parent"
@@ -72,15 +70,16 @@
             android:paddingBottom="8dp"
             tools:itemCount="3"
             tools:listitem="@layout/item_product" />
+
+        <!-- Bottom Navigation -->
         <com.google.android.material.bottomnavigation.BottomNavigationView
             android:id="@+id/bottomNavigation"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="bottom"
             android:background="@color/white"
             app:itemIconTint="@color/selector_nav"
             app:itemTextColor="@color/selector_nav"
-            app:labelVisibilityMode="labeled"
-            app:menu="@menu/bottom_nav_menu" />
+            app:menu="@menu/bottom_nav_menu"
+            app:labelVisibilityMode="labeled" />
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
