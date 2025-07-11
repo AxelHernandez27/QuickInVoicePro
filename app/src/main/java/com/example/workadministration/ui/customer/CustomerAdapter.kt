@@ -11,7 +11,9 @@ import com.example.workadministration.R
 class CustomerAdapter(
     private var clientes: List<Customer>,
     private val onDeleteClick: (Customer) -> Unit,
-    private val onEditClick: (Customer) -> Unit
+    private val onEditClick: (Customer) -> Unit,
+    private val onItemClick: (Customer) -> Unit // Nuevo parámetro
+
 ) : RecyclerView.Adapter<CustomerAdapter.CustomerViewHolder>() {
 
     class CustomerViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -43,6 +45,11 @@ class CustomerAdapter(
 
         holder.btnEliminar.setOnClickListener {
             onDeleteClick(cliente)
+        }
+
+        // Clic general en el item (para mostrar tickets)
+        holder.itemView.setOnClickListener {
+            onItemClick(cliente)
         }
     }
 

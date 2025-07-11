@@ -1,6 +1,7 @@
 package com.example.workadministration.ui.customer
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -13,6 +14,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.workadministration.R
 import com.example.workadministration.ui.NavigationUtil
+import com.example.workadministration.ui.invoice.CustomerInvoicesActivity
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.firestore.FirebaseFirestore
 
@@ -39,13 +41,24 @@ class CustomerActivity : AppCompatActivity(),
 
         recyclerCustomers = findViewById(R.id.recyclerClientes)
         searchCustomer = findViewById(R.id.buscarCliente)
+        adapter = CustomerAdapter(
+            clientes = customersList,
+            onDeleteClick = { customer ->
+                eliminarCliente(customer)
+            },
+            onEditClick = { customer ->
+                val editBottomSheet = EditCustomerBottomSheet(customer)
+                editBottomSheet.show(supportFragmentManager, "EditCustomerBottomSheet")
+            },
+            onItemClick = { customer ->
+                // Ir a la pantalla de tickets
+                val intent = Intent(this, CustomerInvoicesActivity::class.java)
+                intent.putExtra("clienteId", customer.id)
+                intent.putExtra("clienteNombre", customer.fullname)
+                startActivity(intent)
+            }
+        )
 
-        adapter = CustomerAdapter(customersList, { customer ->
-            eliminarCliente(customer)
-        }, { customer ->
-            val editBottomSheet = EditCustomerBottomSheet(customer)
-            editBottomSheet.show(supportFragmentManager, "EditCustomerBottomSheet")
-        })
 
         recyclerCustomers.layoutManager = LinearLayoutManager(this)
         recyclerCustomers.adapter = adapter
