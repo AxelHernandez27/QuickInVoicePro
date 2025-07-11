@@ -84,7 +84,7 @@
                 android:layout_centerVertical="true"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Generar PDF"
-                android:src="@android:drawable/ic_menu_save"
+                android:src="@android:drawable/ic_menu_view"
                 app:tint="#4CAF50" />
 
             <ImageButton

@@ -61,7 +61,8 @@ class GeneratePdfActivity : AppCompatActivity() {
                                     val products = details.map {
                                         val name = it.getString("name") ?: ""
                                         val price = it.getDouble("price") ?: 0.0
-                                        Pair(name, price)
+                                        val quantity = it.getLong("quantity")?.toInt() ?: 1
+                                        Triple(name, price,quantity)
                                     }
                                     generatePDF(customerName, customerAddress, customerPhone, customerEmail, date, total, notes, extra, products)
                                 }
@@ -77,7 +78,7 @@ class GeneratePdfActivity : AppCompatActivity() {
             }
     }
 
-    private fun generatePDF(customerName: String, customerAddress: String, customerPhone: String, customerEmail: String, date: Date, total: Double, notes: String, extra: Double, products: List<Pair<String, Double>>) {
+    private fun generatePDF(customerName: String, customerAddress: String, customerPhone: String, customerEmail: String, date: Date, total: Double, notes: String, extra: Double, products: List<Triple<String, Double,Int>>) {
 
         val pdfDocument = PdfDocument()
         val pageWidth = 400
@@ -160,12 +161,13 @@ class GeneratePdfActivity : AppCompatActivity() {
         paint.textSize = 10f
         paint.typeface = Typeface.DEFAULT_BOLD
         canvas.drawText("Description", 25f, yPosition + 15f, paint)
+        canvas.drawText("Quantity", 180f, yPosition + 15f, paint)
         paint.textAlign = Paint.Align.RIGHT
         canvas.drawText("Amount", pageWidth - 25f, yPosition + 15f, paint)
         yPosition += 35f
 
         // Productos con intercalado de color
-        products.forEachIndexed { index, (desc, price) ->
+        products.forEachIndexed { index, (desc, price, quantity) ->
             if (index % 2 == 1) {
                 paint.color = Color.argb(30, 0, 0, 0)
                 canvas.drawRect(20f, yPosition - 10f, pageWidth - 20f, yPosition + 10f, paint)
@@ -174,6 +176,8 @@ class GeneratePdfActivity : AppCompatActivity() {
             paint.textAlign = Paint.Align.LEFT
             paint.typeface = Typeface.DEFAULT
             canvas.drawText(desc, 25f, yPosition, paint)
+            paint.textAlign = Paint.Align.CENTER
+            canvas.drawText(quantity.toString(), pageWidth / 2f, yPosition, paint)
             paint.textAlign = Paint.Align.RIGHT
             canvas.drawText("$%.2f".format(price), pageWidth - 25f, yPosition, paint)
             yPosition += 20f

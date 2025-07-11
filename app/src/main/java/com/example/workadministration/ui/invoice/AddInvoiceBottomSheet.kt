@@ -30,6 +30,7 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment() {
     private lateinit var etExtraCharges: EditText
     private lateinit var btnSave: Button
     private lateinit var btnCancel: Button
+    private val productViews = mutableMapOf<Product, View>()
 
     private val db = FirebaseFirestore.getInstance()
     private var allProducts = listOf<Product>()
@@ -110,10 +111,14 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment() {
                     val name = adapter.getItem(position)
                     val product = allProducts.find { it.name == name }
                     product?.let {
-                        selectedProducts.add(it)
-                        addProductView(it)
-                        updateTotal()
-                        autoCompleteProduct.setText("")
+                        if (!selectedProducts.any { p -> p.id == it.id }) {
+                            selectedProducts.add(it)
+                            addProductView(it)
+                            updateTotal()
+                            autoCompleteProduct.setText("")
+                        } else {
+                            Toast.makeText(requireContext(), "Producto ya agregado", Toast.LENGTH_SHORT).show()
+                        }
                     }
                 }
 
@@ -130,6 +135,14 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment() {
         val view = LayoutInflater.from(requireContext()).inflate(R.layout.item_invoice_product, layoutProductsContainer, false)
         view.findViewById<TextView>(R.id.tvProductName).text = product.name
         view.findViewById<TextView>(R.id.tvProductPrice).text = "$%.2f".format(product.price)
+        val etQuantity = view.findViewById<EditText>(R.id.EtProductQuantity)
+        etQuantity.setText("1")
+        etQuantity.addTextChangedListener {
+            updateTotal()
+        }
+
+        productViews[product] = view // Guarda la vista asociada al producto
+
         val btnDelete = view.findViewById<ImageButton>(R.id.btnDeleteProduct)
 
         btnDelete.setOnClickListener {
@@ -142,7 +155,11 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun updateTotal() {
-        subtotal = selectedProducts.sumOf { it.price }
+        subtotal = selectedProducts.sumOf { product ->
+            val view = productViews[product]
+            val quantity = view?.findViewById<EditText>(R.id.EtProductQuantity)?.text?.toString()?.toIntOrNull() ?: 1
+            product.price * quantity
+        }
         val total = subtotal + extraCharges
         tvSubtotalAmount.text = "$%.2f".format(subtotal)
         tvTotalAmount.text = "$%.2f".format(total)
@@ -177,10 +194,16 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment() {
             .addOnSuccessListener {
                 val detailsCollection = invoiceRef.collection("invoiceDetails")
                 selectedProducts.forEach { product ->
+                    val productView = productViews[product]
+                    val etQuantity = productView?.findViewById<EditText>(R.id.EtProductQuantity)
+                    val quantity = etQuantity?.text?.toString()?.toIntOrNull() ?: 1
+
                     val detail = hashMapOf(
                         "productId" to product.id,
                         "name" to product.name,
-                        "price" to product.price
+                        "price" to product.price,
+                        "quantity" to quantity
+
                     )
                     detailsCollection.add(detail)
                 }
