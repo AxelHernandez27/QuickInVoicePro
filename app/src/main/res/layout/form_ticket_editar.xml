@@ -16,7 +16,7 @@
             android:id="@+id/tvFormTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Editar Ticket"
+            android:text="Edit Ticket"
             android:textSize="24sp"
             android:textStyle="bold"
             android:textColor="#000000"
@@ -26,7 +26,7 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Cliente"
+            android:text="Client"
             android:textSize="16sp"
             android:textColor="#000000"
             android:layout_marginBottom="8dp"/>
@@ -35,18 +35,29 @@
             android:id="@+id/autoCompleteClient"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Buscar cliente"
+            android:layout_marginBottom="16dp"
             android:background="@drawable/input_background"
+            android:hint="Search Client"
             android:padding="12dp"
             android:textColor="#000000"
-            android:textColorHint="#999999"
-            android:layout_marginBottom="16dp"/>
+            android:textColorHint="#999999" />
+
+        <Button
+            android:id="@+id/btnAddCustomProduct"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Add custom product"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/rounded_button_green"
+            android:textColor="#FFFFFF"
+            />
+
 
         <!-- Seleccionar Producto -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Productos"
+            android:text="Products"
             android:textSize="16sp"
             android:textColor="#000000"
             android:layout_marginBottom="8dp"/>
@@ -55,7 +66,7 @@
             android:id="@+id/autoCompleteProduct"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Buscar producto"
+            android:hint="Search Products"
             android:background="@drawable/input_background"
             android:padding="12dp"
             android:textColor="#000000"
@@ -132,7 +143,7 @@
             android:id="@+id/etExtraCharges"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Cargos adicionales"
+            android:hint="Extra Charges"
             android:background="@drawable/input_background"
             android:padding="12dp"
             android:inputType="numberDecimal"
@@ -145,7 +156,7 @@
             android:id="@+id/etAdditionalNotes"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Notas adicionales"
+            android:hint="Notes"
             android:background="@drawable/input_background"
             android:padding="12dp"
             android:inputType="textMultiLine"
@@ -165,7 +176,7 @@
                 android:id="@+id/btnCancel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Cancelar"
+                android:text="Cancel"
                 android:background="@drawable/rounded_button_red"
                 android:textColor="#FFFFFF"
                 android:textAllCaps="false"
@@ -175,7 +186,7 @@
                 android:id="@+id/btnSave"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Actualizar"
+                android:text="Update"
                 android:background="@drawable/rounded_button_yellow"
                 android:textColor="#FFFFFF"
                 android:textAllCaps="false"/>
