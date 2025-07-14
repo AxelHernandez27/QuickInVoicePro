@@ -34,26 +34,7 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
     private val db = FirebaseFirestore.getInstance()
 
     override fun onCustomerAdded(customer: Customer) {
-        // Puedes dejarlo vacío si no necesitas hacer nada aquí,
-        // ya que el `AddInvoiceBottomSheet` también recibe el resultado.
     }
-
-    private val addInvoiceLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == RESULT_OK) {
-            getInvoices()
-        }
-    }
-
-    private val editInvoiceLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == RESULT_OK) {
-            getInvoices() // Recarga la lista al volver de editar
-        }
-    }
-
 
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,7 +62,6 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
         recyclerView.adapter = adapter
         searchInvoice = findViewById(R.id.buscarTicket)
 
-
         getInvoices()
 
         searchInvoice.addTextChangedListener(object : TextWatcher {
@@ -93,7 +73,6 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
 
-        // Integración de la navegación
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNavigation)
         NavigationUtil.setupNavigation(this, bottomNav, R.id.nav_tickets)
     }
@@ -102,11 +81,14 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
         getInvoices()
     }
 
-
     private fun getInvoices() {
         val db = FirebaseFirestore.getInstance()
 
-        db.collection("invoices").get().addOnSuccessListener { invoicesSnapshot ->
+        db.collection("invoices")
+            .orderBy("date", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .get()
+            .addOnSuccessListener { invoicesSnapshot ->
+
             invoiceList.clear()
 
             for (invoiceDoc in invoicesSnapshot) {
@@ -129,7 +111,6 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
                 val notes = invoiceDoc.getString("notes") ?: ""
                 val total = invoiceDoc.getDouble("total") ?: 0.0
 
-                // Obtener subcolección de productos
                 db.collection("invoices").document(invoiceId)
                     .collection("invoiceDetails")
                     .get()
@@ -178,7 +159,6 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
         editInvoiceSheet.show(supportFragmentManager, "EditInvoiceBottomSheet")
     }
 
-
     private fun deleteInvoice(invoice: Invoice) {
         db.collection("invoices").document(invoice.id)
             .delete()
@@ -202,6 +182,4 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
             .create()
         alert.show()
     }
-
-
 }

@@ -79,6 +79,7 @@ class CustomerActivity : AppCompatActivity(),
 
     private fun getCustomers() {
         db.collection("customers")
+            .orderBy("fullname", com.google.firebase.firestore.Query.Direction.ASCENDING)
             .get()
             .addOnSuccessListener { documents ->
                 customersList.clear()

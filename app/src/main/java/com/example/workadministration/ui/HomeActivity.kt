@@ -70,6 +70,7 @@ class HomeActivity : AppCompatActivity(),
 
     private fun getAppointments() {
         db.collection("appointments")
+            .orderBy("date", com.google.firebase.firestore.Query.Direction.ASCENDING)
             .get()
             .addOnSuccessListener { documents ->
                 appointmentsList.clear()

@@ -65,6 +65,7 @@ class ProductActivity : AppCompatActivity(),
 
     private fun getProducts() {
         db.collection("products")
+            .orderBy("name", com.google.firebase.firestore.Query.Direction.ASCENDING)
             .get()
             .addOnSuccessListener { documents ->
                 productsList.clear()
