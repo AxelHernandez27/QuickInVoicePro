@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.workadministration.R
 
 class CustomerAdapter(
+
     private var clientes: List<Customer>,
     private val onDeleteClick: (Customer) -> Unit,
     private val onEditClick: (Customer) -> Unit,

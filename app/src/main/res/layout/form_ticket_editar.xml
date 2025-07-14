@@ -43,6 +43,16 @@
             android:textColorHint="#999999" />
 
         <Button
+            android:id="@+id/btnAddClient"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Add New Client"
+            android:background="@drawable/rounded_button_blue"
+            android:textColor="#FFFFFF"
+            android:textAllCaps="false"
+            android:layout_marginBottom="16dp"/>
+
+        <Button
             android:id="@+id/btnAddCustomProduct"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

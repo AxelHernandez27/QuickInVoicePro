@@ -35,7 +35,7 @@ class CustomerActivity : AppCompatActivity(),
 
         val addButton = findViewById<Button>(R.id.btnAgregarCliente)
         addButton.setOnClickListener {
-            val bottomSheet = AddCustomerBottomSheet()
+            val bottomSheet = AddCustomerBottomSheet(this)
             bottomSheet.show(supportFragmentManager, "AddCustomerBottomSheet")
         }
 

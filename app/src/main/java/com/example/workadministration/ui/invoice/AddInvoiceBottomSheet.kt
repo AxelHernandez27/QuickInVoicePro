@@ -2,24 +2,27 @@ package com.example.workadministration.ui.invoice
 
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.*
 import androidx.core.widget.addTextChangedListener
 import com.example.workadministration.R
+import com.example.workadministration.ui.customer.AddCustomerBottomSheet
 import com.example.workadministration.ui.customer.Customer
 import com.example.workadministration.ui.product.Product
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 
-class AddInvoiceBottomSheet : BottomSheetDialogFragment() {
+class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomSheet.OnCustomerAddedListener {
 
     interface OnInvoiceSavedListener {
         fun onInvoiceSaved()
     }
 
     private lateinit var listener: OnInvoiceSavedListener
+    private lateinit var customerAdapter: ArrayAdapter<String>
 
     private lateinit var autoCompleteClient: AutoCompleteTextView
     private lateinit var autoCompleteProduct: AutoCompleteTextView
@@ -30,12 +33,12 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment() {
     private lateinit var etExtraCharges: EditText
     private lateinit var btnSave: Button
     private lateinit var btnCancel: Button
-    private val productViews = mutableMapOf<Product, View>()
 
     private val db = FirebaseFirestore.getInstance()
     private var allProducts = listOf<Product>()
     private var allCustomers = listOf<Customer>()
-    private val selectedProducts = mutableListOf<Product>()
+    private val productViews = mutableMapOf<String, View>()
+    private val selectedProducts = mutableMapOf<String, Pair<Product, Int>>() // ID -> (Product, Quantity)
 
     private var selectedCustomer: Customer? = null
     private var subtotal = 0.0
@@ -54,6 +57,7 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment() {
         val view = inflater.inflate(R.layout.form_ticket_agregar, container, false)
 
         autoCompleteClient = view.findViewById(R.id.autoCompleteClient)
+        val btnAddClient = view.findViewById<Button>(R.id.btnAddClient)
         autoCompleteProduct = view.findViewById(R.id.autoCompleteProduct)
         layoutProductsContainer = view.findViewById(R.id.layoutProductsContainer)
         tvSubtotalAmount = view.findViewById(R.id.tvSubtotalAmount)
@@ -65,6 +69,12 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment() {
 
         loadClients()
         loadProducts()
+
+        btnAddClient.setOnClickListener {
+            val addCustomerBottomSheet = AddCustomerBottomSheet(this)
+            addCustomerBottomSheet.show(parentFragmentManager, "AddCustomerBottomSheet")
+
+        }
 
         etExtraCharges.addTextChangedListener {
             extraCharges = it.toString().toDoubleOrNull() ?: 0.0
@@ -78,86 +88,149 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun loadClients() {
-        db.collection("customers").get()
-            .addOnSuccessListener { documents ->
-                allCustomers = documents.map { it.toObject(Customer::class.java).copy(id = it.id) }
-                val names = allCustomers.map { it.fullname }
-                val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, names)
-                autoCompleteClient.setAdapter(adapter)
+        db.collection("customers").get().addOnSuccessListener { documents ->
+            allCustomers = documents.map { it.toObject(Customer::class.java).copy(id = it.id) }
+            customerAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, allCustomers.map { it.fullname })
+            autoCompleteClient.setAdapter(customerAdapter)
 
-                autoCompleteClient.setOnItemClickListener { _, _, position, _ ->
-                    val name = adapter.getItem(position)
-                    selectedCustomer = allCustomers.find { it.fullname == name }
-                }
-
-                autoCompleteClient.setOnClickListener {
-                    if (autoCompleteClient.adapter != null) autoCompleteClient.showDropDown()
-                }
-                autoCompleteClient.setOnFocusChangeListener { _, hasFocus ->
-                    if (hasFocus && autoCompleteClient.adapter != null) autoCompleteClient.showDropDown()
-                }
+            autoCompleteClient.setOnItemClickListener { _, _, position, _ ->
+                val name = customerAdapter.getItem(position)
+                selectedCustomer = allCustomers.find { it.fullname == name }
+                autoCompleteClient.error = null
+                Log.d("Invoice", "Cliente seleccionado manualmente: ${selectedCustomer?.id} - ${selectedCustomer?.fullname}")
             }
+
+            autoCompleteClient.setOnClickListener {
+                if (autoCompleteClient.adapter != null) autoCompleteClient.showDropDown()
+            }
+
+            autoCompleteClient.setOnFocusChangeListener { _, hasFocus ->
+                if (hasFocus && autoCompleteClient.adapter != null) autoCompleteClient.showDropDown()
+            }
+        }
     }
 
+    override fun onCustomerAdded(customer: Customer) {
+        allCustomers = allCustomers + customer
+
+        customerAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, allCustomers.map { it.fullname })
+        autoCompleteClient.setAdapter(customerAdapter)
+
+        selectedCustomer = customer
+        autoCompleteClient.setText(customer.fullname, false)
+        autoCompleteClient.error = null
+
+        autoCompleteClient.clearFocus()
+
+        Toast.makeText(requireContext(), "Cliente seleccionado: ${customer.fullname}", Toast.LENGTH_SHORT).show()
+    }
+
+
     private fun loadProducts() {
-        db.collection("products").get()
-            .addOnSuccessListener { documents ->
-                allProducts = documents.map { it.toObject(Product::class.java).copy(id = it.id) }
-                val productNames = allProducts.map { it.name }
-                val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, productNames)
-                autoCompleteProduct.setAdapter(adapter)
+        db.collection("products").get().addOnSuccessListener { documents ->
+            allProducts = documents.map { it.toObject(Product::class.java).copy(id = it.id) }
+            val productNames = allProducts.map { it.name }
+            val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, productNames)
+            autoCompleteProduct.setAdapter(adapter)
+            adapter.notifyDataSetChanged()
 
-                autoCompleteProduct.setOnItemClickListener { _, _, position, _ ->
-                    val name = adapter.getItem(position)
-                    val product = allProducts.find { it.name == name }
-                    product?.let {
-                        if (!selectedProducts.any { p -> p.id == it.id }) {
-                            selectedProducts.add(it)
-                            addProductView(it)
-                            updateTotal()
-                            autoCompleteProduct.setText("")
-                        } else {
-                            Toast.makeText(requireContext(), "Producto ya agregado", Toast.LENGTH_SHORT).show()
-                        }
+            autoCompleteProduct.setOnItemClickListener { _, _, position, _ ->
+                val name = adapter.getItem(position)
+                val product = allProducts.find { it.name == name }
+                product?.let {
+                    if (selectedProducts.containsKey(it.id)) {
+                        incrementQuantity(it.id)
+                    } else {
+                        selectedProducts[it.id] = Pair(it, 1)
+                        addProductView(it)
                     }
-                }
-
-                autoCompleteProduct.setOnClickListener {
-                    if (autoCompleteProduct.adapter != null) autoCompleteProduct.showDropDown()
-                }
-                autoCompleteProduct.setOnFocusChangeListener { _, hasFocus ->
-                    if (hasFocus && autoCompleteProduct.adapter != null) autoCompleteProduct.showDropDown()
+                    updateTotal()
+                    autoCompleteProduct.setText("")
                 }
             }
+
+            autoCompleteProduct.setOnClickListener {
+                if (autoCompleteProduct.adapter != null) autoCompleteProduct.showDropDown()
+            }
+
+            autoCompleteProduct.setOnFocusChangeListener { _, hasFocus ->
+                if (hasFocus && autoCompleteProduct.adapter != null) autoCompleteProduct.showDropDown()
+            }
+        }
     }
 
     private fun addProductView(product: Product) {
         val view = LayoutInflater.from(requireContext()).inflate(R.layout.item_invoice_product, layoutProductsContainer, false)
+
         view.findViewById<TextView>(R.id.tvProductName).text = product.name
         view.findViewById<TextView>(R.id.tvProductPrice).text = "$%.2f".format(product.price)
+
         val etQuantity = view.findViewById<EditText>(R.id.EtProductQuantity)
+        val btnIncrease = view.findViewById<Button>(R.id.btnIncreaseQuantity)
+        val btnDecrease = view.findViewById<Button>(R.id.btnDecreaseQuantity)
+        val btnDelete = view.findViewById<ImageButton>(R.id.btnDeleteProduct)
+
         etQuantity.setText("1")
-        etQuantity.addTextChangedListener {
+        etQuantity.inputType = android.text.InputType.TYPE_CLASS_NUMBER
+
+        selectedProducts[product.id] = product to 1
+
+        btnIncrease.setOnClickListener {
+            val currentQty = etQuantity.text.toString().toIntOrNull() ?: 1
+            val newQty = currentQty + 1
+            etQuantity.setText(newQty.toString())
+            selectedProducts[product.id] = product to newQty
             updateTotal()
         }
 
-        productViews[product] = view // Guarda la vista asociada al producto
+        btnDecrease.setOnClickListener {
+            val currentQty = etQuantity.text.toString().toIntOrNull() ?: 1
+            if (currentQty > 1) {
+                val newQty = currentQty - 1
+                etQuantity.setText(newQty.toString())
+                selectedProducts[product.id] = product to newQty
+                etQuantity.error = null
+            } else {
+                etQuantity.setText("1")
+                etQuantity.error = "Mínimo 1"
+            }
+            updateTotal()
+        }
 
-        val btnDelete = view.findViewById<ImageButton>(R.id.btnDeleteProduct)
+        etQuantity.addTextChangedListener {
+            val qty = it.toString().toIntOrNull()
+            if (qty != null && qty >= 1) {
+                selectedProducts[product.id] = product to qty
+                etQuantity.error = null
+            } else {
+                etQuantity.setText("1")
+                selectedProducts[product.id] = product to 1
+                etQuantity.error = "Mínimo 1"
+            }
+            updateTotal()
+        }
 
         btnDelete.setOnClickListener {
-            selectedProducts.remove(product)
+            selectedProducts.remove(product.id)
             layoutProductsContainer.removeView(view)
             updateTotal()
         }
 
+        productViews[product.id] = view
         layoutProductsContainer.addView(view)
     }
 
+    private fun incrementQuantity(productId: String) {
+        val pair = selectedProducts[productId]
+        if (pair != null) {
+            val newQty = pair.second + 1
+            selectedProducts[productId] = pair.first to newQty
+            productViews[productId]?.findViewById<EditText>(R.id.EtProductQuantity)?.setText(newQty.toString())
+        }
+    }
+
     private fun updateTotal() {
-        subtotal = selectedProducts.sumOf { product ->
-            val view = productViews[product]
-            val quantity = view?.findViewById<EditText>(R.id.EtProductQuantity)?.text?.toString()?.toIntOrNull() ?: 1
+        subtotal = selectedProducts.values.sumOf { (product, quantity) ->
             product.price * quantity
         }
         val total = subtotal + extraCharges
@@ -166,10 +239,12 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun saveInvoice() {
-        if (selectedCustomer == null) {
-            Toast.makeText(requireContext(), "Please select a client", Toast.LENGTH_SHORT).show()
+        val clientName = autoCompleteClient.text.toString().trim()
+        if (clientName.isEmpty() || selectedCustomer == null) {
+            autoCompleteClient.error = "Please select a client"
             return
         }
+
         if (selectedProducts.isEmpty()) {
             Toast.makeText(requireContext(), "Please add at least one product", Toast.LENGTH_SHORT).show()
             return
@@ -190,30 +265,24 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment() {
             "total" to total
         )
 
-        invoiceRef.set(invoiceData)
-            .addOnSuccessListener {
-                val detailsCollection = invoiceRef.collection("invoiceDetails")
-                selectedProducts.forEach { product ->
-                    val productView = productViews[product]
-                    val etQuantity = productView?.findViewById<EditText>(R.id.EtProductQuantity)
-                    val quantity = etQuantity?.text?.toString()?.toIntOrNull() ?: 1
-
-                    val detail = hashMapOf(
-                        "productId" to product.id,
-                        "name" to product.name,
-                        "price" to product.price,
-                        "quantity" to quantity
-
-                    )
-                    detailsCollection.add(detail)
-                }
-                Toast.makeText(requireContext(), "Invoice saved successfully", Toast.LENGTH_SHORT).show()
-                listener.onInvoiceSaved()
-                dismiss()
+        invoiceRef.set(invoiceData).addOnSuccessListener {
+            val detailsCollection = invoiceRef.collection("invoiceDetails")
+            selectedProducts.values.forEach { (product, quantity) ->
+                val detail = hashMapOf(
+                    "productId" to product.id,
+                    "name" to product.name,
+                    "price" to product.price,
+                    "quantity" to quantity
+                )
+                detailsCollection.add(detail)
             }
-            .addOnFailureListener {
-                Toast.makeText(requireContext(), "Error saving invoice", Toast.LENGTH_SHORT).show()
-            }
+
+            Toast.makeText(requireContext(), "Invoice saved successfully", Toast.LENGTH_SHORT).show()
+            listener.onInvoiceSaved()
+            dismiss()
+        }.addOnFailureListener {
+            Toast.makeText(requireContext(), "Error saving invoice", Toast.LENGTH_SHORT).show()
+        }
     }
 
     override fun getTheme(): Int = R.style.CustomBottomSheetDialogTheme

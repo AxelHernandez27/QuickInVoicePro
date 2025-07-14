@@ -11,21 +11,12 @@ import android.widget.Toast
 import com.example.workadministration.R
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 
-class AddCustomerBottomSheet : BottomSheetDialogFragment() {
-
-    private lateinit var listener: OnCustomerAddedListener
+class AddCustomerBottomSheet(
+    private val listener: OnCustomerAddedListener
+) : BottomSheetDialogFragment() {
 
     interface OnCustomerAddedListener {
         fun onCustomerAdded(customer: Customer)
-    }
-
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-        if (context is OnCustomerAddedListener) {
-            listener = context
-        } else {
-            throw RuntimeException("$context must implement OnCustomerAddedListener")
-        }
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
@@ -74,17 +65,28 @@ class AddCustomerBottomSheet : BottomSheetDialogFragment() {
             }
 
             // Save directly, no confirmation dialog
+            val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+            val newCustomerRef = db.collection("customers").document()
+
             val customer = Customer(
+                id = newCustomerRef.id,
                 fullname = name,
                 address = address,
                 phone = phone,
                 email = email,
                 notes = notes
             )
-            listener.onCustomerAdded(customer)
 
-            Toast.makeText(requireContext(), "Customer added successfully", Toast.LENGTH_SHORT).show()
-            dismiss()
+            newCustomerRef.set(customer)
+                .addOnSuccessListener {
+                    listener.onCustomerAdded(customer)
+                    Toast.makeText(requireContext(), "Customer added successfully", Toast.LENGTH_SHORT).show()
+                    dismiss()
+                }
+                .addOnFailureListener {
+                    Toast.makeText(requireContext(), "Error saving customer", Toast.LENGTH_SHORT).show()
+                }
+
         }
 
         return dialog

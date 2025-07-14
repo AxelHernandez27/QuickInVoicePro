@@ -8,19 +8,21 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import com.example.workadministration.R
+import com.example.workadministration.ui.customer.AddCustomerBottomSheet
 import com.example.workadministration.ui.customer.Customer
 import com.example.workadministration.ui.product.Product
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 
-class EditInvoiceBottomSheet : BottomSheetDialogFragment() {
+class EditInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomSheet.OnCustomerAddedListener {
 
     interface OnInvoiceUpdatedListener {
         fun onInvoiceUpdated()
     }
 
     private var listener: OnInvoiceUpdatedListener? = null
+    private lateinit var customerAdapter: ArrayAdapter<String>
 
     fun setOnInvoiceUpdatedListener(listener: OnInvoiceUpdatedListener) {
         this.listener = listener
@@ -71,6 +73,7 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment() {
         val view = inflater.inflate(R.layout.form_ticket_editar, container, false)
 
         autoCompleteClient = view.findViewById(R.id.autoCompleteClient)
+        val btnAddClient = view.findViewById<Button>(R.id.btnAddClient)
         autoCompleteProduct = view.findViewById(R.id.autoCompleteProduct)
         layoutProductsContainer = view.findViewById(R.id.layoutProductsContainer)
         tvSubtotalAmount = view.findViewById(R.id.tvSubtotalAmount)
@@ -86,6 +89,11 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment() {
             }
         }
 
+        btnAddClient.setOnClickListener {
+            val addCustomerBottomSheet = AddCustomerBottomSheet(this)
+            addCustomerBottomSheet.show(parentFragmentManager, "AddCustomerBottomSheet")
+
+        }
 
         etExtraCharges.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
@@ -125,6 +133,21 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment() {
 
             onComplete()
         }
+    }
+
+    override fun onCustomerAdded(customer: Customer) {
+        allCustomers = allCustomers + customer
+
+        customerAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, allCustomers.map { it.fullname })
+        autoCompleteClient.setAdapter(customerAdapter)
+
+        selectedCustomer = customer
+        autoCompleteClient.setText(customer.fullname, false)
+        autoCompleteClient.error = null
+
+        autoCompleteClient.clearFocus()
+
+        Toast.makeText(requireContext(), "Cliente seleccionado: ${customer.fullname}", Toast.LENGTH_SHORT).show()
     }
 
     private fun loadProducts(onComplete: () -> Unit) {

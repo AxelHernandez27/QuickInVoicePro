@@ -85,7 +85,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Generar PDF"
                 android:src="@android:drawable/ic_menu_view"
-                app:tint="#4CAF50" />
+                app:tint="#03A9F4" />
 
             <ImageButton
                 android:id="@+id/btnEliminar"

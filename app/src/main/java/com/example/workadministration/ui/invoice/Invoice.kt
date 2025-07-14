@@ -11,7 +11,6 @@ data class Invoice (
     val extraCharges: Double = 0.0,
     val notes: String = "",
     val products: List<ProductDetail> = emptyList(),
-    val quantity: Number = 0,
     val total: Double = 0.0
 )
 

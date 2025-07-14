@@ -5,7 +5,7 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal"
     android:padding="8dp"
-    android:background="#EEEEEE"
+    android:background="#F5F5F5"
     android:layout_marginBottom="8dp"
     android:gravity="center_vertical">
 
@@ -24,20 +24,42 @@
         android:layout_height="wrap_content"
         android:text="$0.00"
         android:textSize="16sp"
-        android:textStyle="bold"
-        android:textColor="#000000"
+        android:textColor="#444444"
         android:layout_marginEnd="8dp" />
 
-    <!-- Campo de cantidad -->
+    <!-- Botón de disminuir -->
+    <Button
+        android:id="@+id/btnDecreaseQuantity"
+        android:layout_width="35dp"
+        android:layout_height="35dp"
+        android:layout_marginEnd="4dp"
+        android:text="−"
+        android:textColor="@android:color/white"
+        android:textSize="18sp"
+        android:background="@drawable/bg_button_minus" />
+
+    <!-- Cantidad -->
     <EditText
         android:id="@+id/EtProductQuantity"
         android:layout_width="40dp"
         android:layout_height="35dp"
-        android:layout_marginEnd="8dp"
-        android:background="@android:drawable/edit_text"
+        android:layout_marginEnd="4dp"
         android:gravity="center"
-        android:hint="1"
-        android:inputType="number" />
+        android:inputType="number"
+        android:text="1"
+        android:background="@drawable/bg_quantity_input"
+        android:textColor="#000000" />
+
+    <!-- Botón de aumentar -->
+    <Button
+        android:id="@+id/btnIncreaseQuantity"
+        android:layout_width="35dp"
+        android:layout_height="35dp"
+        android:layout_marginEnd="8dp"
+        android:text="+"
+        android:textColor="@android:color/white"
+        android:textSize="18sp"
+        android:background="@drawable/bg_button_plus" />
 
     <!-- Botón eliminar -->
     <ImageButton
@@ -47,6 +69,5 @@
         android:background="?attr/selectableItemBackgroundBorderless"
         android:src="@android:drawable/ic_menu_delete"
         android:contentDescription="Eliminar"
-        app:tint="#F44336" />
-
+        app:tint="#000000" />
 </LinearLayout>

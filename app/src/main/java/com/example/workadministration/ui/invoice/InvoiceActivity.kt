@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.workadministration.R
 import com.example.workadministration.ui.NavigationUtil
+import com.example.workadministration.ui.customer.AddCustomerBottomSheet
 import com.example.workadministration.ui.customer.Customer
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.firestore.FirebaseFirestore
@@ -23,7 +24,7 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.TimeZone
 
-class InvoiceActivity : AppCompatActivity(), AddInvoiceBottomSheet.OnInvoiceSavedListener {
+class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAddedListener, AddInvoiceBottomSheet.OnInvoiceSavedListener {
 
 
     private lateinit var recyclerView: RecyclerView
@@ -32,6 +33,10 @@ class InvoiceActivity : AppCompatActivity(), AddInvoiceBottomSheet.OnInvoiceSave
     private val invoiceList = mutableListOf<Invoice>()
     private val db = FirebaseFirestore.getInstance()
 
+    override fun onCustomerAdded(customer: Customer) {
+        // Puedes dejarlo vacío si no necesitas hacer nada aquí,
+        // ya que el `AddInvoiceBottomSheet` también recibe el resultado.
+    }
 
     private val addInvoiceLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
