@@ -100,7 +100,7 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
                 val timestamp = invoiceDoc.getTimestamp("date")
                 val dateFormatted = if (timestamp != null) {
                     val dateObj = timestamp.toDate()
-                    val formatter = SimpleDateFormat("dd/MM/yyyy hh:mm:ss a", Locale("es", "MX"))
+                    val formatter = SimpleDateFormat("MM/dd/yyyy hh:mm a", Locale("en", "US"))
                     formatter.timeZone = TimeZone.getTimeZone("America/Mexico_City") // Hora centro México
                     formatter.format(dateObj)
                 } else {
@@ -144,7 +144,8 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
 
     private fun filterInvoices(text: String) {
         val filteredList = invoiceList.filter {
-            it.customerName.contains(text, ignoreCase = true)
+            it.customerName.contains(text, ignoreCase = true) ||
+                    it.date.contains(text, ignoreCase = true)
         }
         adapter.updateList(filteredList)
     }

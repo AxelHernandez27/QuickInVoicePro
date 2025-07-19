@@ -62,7 +62,7 @@ class GeneratePdfActivity : AppCompatActivity() {
                                         val name = it.getString("name") ?: ""
                                         val price = it.getDouble("price") ?: 0.0
                                         val quantity = it.getLong("quantity")?.toInt() ?: 1
-                                        Triple(name, price,quantity)
+                                        Triple(name, price, quantity)
                                     }
                                     generatePDF(customerName, customerAddress, customerPhone, customerEmail, date, total, notes, extra, products)
                                 }
@@ -78,7 +78,7 @@ class GeneratePdfActivity : AppCompatActivity() {
             }
     }
 
-    private fun generatePDF(customerName: String, customerAddress: String, customerPhone: String, customerEmail: String, date: Date, total: Double, notes: String, extra: Double, products: List<Triple<String, Double,Int>>) {
+    private fun generatePDF(customerName: String, customerAddress: String, customerPhone: String, customerEmail: String, date: Date, total: Double, notes: String, extra: Double, products: List<Triple<String, Double, Int>>) {
 
         val pdfDocument = PdfDocument()
         val pageWidth = 400
@@ -88,21 +88,18 @@ class GeneratePdfActivity : AppCompatActivity() {
         val canvas = page.canvas
         val paint = Paint()
 
-        // Marca de agua
         val logo = BitmapFactory.decodeResource(resources, R.drawable.logo1)
         val scaledWatermark = Bitmap.createScaledBitmap(logo, 300, 300, false)
 
         val watermarkPaint = Paint()
-        watermarkPaint.alpha = 30 // Transparencia (0 - 255)
+        watermarkPaint.alpha = 30
 
-        // Centrar marca de agua
         val watermarkX = (pageWidth - scaledWatermark.width) / 2f
         val watermarkY = (pageHeight - scaledWatermark.height) / 2f
 
         canvas.drawBitmap(scaledWatermark, watermarkX, watermarkY, watermarkPaint)
         var yPosition = 40f
 
-        // Título con subrayado azul
         paint.textAlign = Paint.Align.CENTER
         paint.typeface = Typeface.create(Typeface.DEFAULT_BOLD, Typeface.BOLD_ITALIC)
         paint.textSize = 22f
@@ -127,7 +124,6 @@ class GeneratePdfActivity : AppCompatActivity() {
 
         yPosition += 25f
 
-        // Bill To Recuadro Azul
         val billToX = pageWidth - (pageWidth / 3f)
         val boxHeight = 20f
         paint.color = Color.parseColor("#8AB6B6")
@@ -153,20 +149,20 @@ class GeneratePdfActivity : AppCompatActivity() {
 
         yPosition += 30f
 
-        // Tabla encabezado
         paint.color = Color.parseColor("#8AB6B6")
         canvas.drawRect(20f, yPosition, pageWidth - 20f, yPosition + 20f, paint)
 
         paint.color = Color.BLACK
         paint.textSize = 10f
         paint.typeface = Typeface.DEFAULT_BOLD
+        paint.textAlign = Paint.Align.LEFT
         canvas.drawText("Description", 25f, yPosition + 15f, paint)
-        canvas.drawText("Quantity", 180f, yPosition + 15f, paint)
+        canvas.drawText("Qty", 150f, yPosition + 15f, paint)
+        canvas.drawText("Unit", 200f, yPosition + 15f, paint)
         paint.textAlign = Paint.Align.RIGHT
         canvas.drawText("Amount", pageWidth - 25f, yPosition + 15f, paint)
         yPosition += 35f
 
-        // Productos con intercalado de color
         products.forEachIndexed { index, (desc, price, quantity) ->
             if (index % 2 == 1) {
                 paint.color = Color.argb(30, 0, 0, 0)
@@ -176,14 +172,13 @@ class GeneratePdfActivity : AppCompatActivity() {
             paint.textAlign = Paint.Align.LEFT
             paint.typeface = Typeface.DEFAULT
             canvas.drawText(desc, 25f, yPosition, paint)
-            paint.textAlign = Paint.Align.CENTER
-            canvas.drawText(quantity.toString(), pageWidth / 2f, yPosition, paint)
+            canvas.drawText(quantity.toString(), 150f, yPosition, paint)
+            canvas.drawText("$%.2f".format(price), 200f, yPosition, paint)
             paint.textAlign = Paint.Align.RIGHT
-            canvas.drawText("$%.2f".format(price), pageWidth - 25f, yPosition, paint)
+            canvas.drawText("$%.2f".format(price * quantity), pageWidth - 25f, yPosition, paint)
             yPosition += 20f
         }
 
-        // Total Payment
         listOf(
             "Total Payment" to (total - extra),
             "Extra Charges" to extra,
@@ -204,7 +199,6 @@ class GeneratePdfActivity : AppCompatActivity() {
 
         yPosition += 40f
 
-        // Notas
         paint.textAlign = Paint.Align.LEFT
         paint.typeface = Typeface.DEFAULT_BOLD
         paint.textSize = 10f
@@ -215,7 +209,6 @@ class GeneratePdfActivity : AppCompatActivity() {
 
         yPosition += 60f
 
-        // Firma y nombre centrado
         paint.textAlign = Paint.Align.CENTER
         paint.typeface = Typeface.DEFAULT
         canvas.drawText("_________________________", pageWidth / 2f, yPosition, paint)
@@ -235,7 +228,6 @@ class GeneratePdfActivity : AppCompatActivity() {
         Toast.makeText(this, "PDF saved: ${filePath.absolutePath}", Toast.LENGTH_LONG).show()
         openPDF(filePath)
     }
-
 
     private fun openPDF(file: File) {
         val uri = FileProvider.getUriForFile(this, "$packageName.provider", file)

@@ -5,7 +5,9 @@ import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import androidx.core.widget.addTextChangedListener
 import com.example.workadministration.R
 import com.example.workadministration.ui.customer.AddCustomerBottomSheet
@@ -53,7 +55,7 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
         }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: android.view.ViewGroup?, savedInstanceState: Bundle?): View? {
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.form_ticket_agregar, container, false)
 
         autoCompleteClient = view.findViewById(R.id.autoCompleteClient)
@@ -66,6 +68,9 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
         etExtraCharges = view.findViewById(R.id.etExtraCharges)
         btnSave = view.findViewById(R.id.btnSave)
         btnCancel = view.findViewById(R.id.btnCancel)
+        view.findViewById<Button>(R.id.btnAddCustomProduct).setOnClickListener {
+            showAddCustomProductDialog()
+        }
 
         loadClients()
         loadProducts()
@@ -73,7 +78,6 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
         btnAddClient.setOnClickListener {
             val addCustomerBottomSheet = AddCustomerBottomSheet(this)
             addCustomerBottomSheet.show(parentFragmentManager, "AddCustomerBottomSheet")
-
         }
 
         etExtraCharges.addTextChangedListener {
@@ -97,7 +101,6 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
                 val name = customerAdapter.getItem(position)
                 selectedCustomer = allCustomers.find { it.fullname == name }
                 autoCompleteClient.error = null
-                Log.d("Invoice", "Cliente seleccionado manualmente: ${selectedCustomer?.id} - ${selectedCustomer?.fullname}")
             }
 
             autoCompleteClient.setOnClickListener {
@@ -122,9 +125,8 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
 
         autoCompleteClient.clearFocus()
 
-        Toast.makeText(requireContext(), "Cliente seleccionado: ${customer.fullname}", Toast.LENGTH_SHORT).show()
+        Toast.makeText(requireContext(), "Selected customer: ${customer.fullname}", Toast.LENGTH_SHORT).show()
     }
-
 
     private fun loadProducts() {
         db.collection("products").get().addOnSuccessListener { documents ->
@@ -169,6 +171,7 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
         val btnIncrease = view.findViewById<Button>(R.id.btnIncreaseQuantity)
         val btnDecrease = view.findViewById<Button>(R.id.btnDecreaseQuantity)
         val btnDelete = view.findViewById<ImageButton>(R.id.btnDeleteProduct)
+        val btnEdit = view.findViewById<ImageButton>(R.id.btnEditProduct)
 
         etQuantity.setText("1")
         etQuantity.inputType = android.text.InputType.TYPE_CLASS_NUMBER
@@ -192,7 +195,7 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
                 etQuantity.error = null
             } else {
                 etQuantity.setText("1")
-                etQuantity.error = "Mínimo 1"
+                etQuantity.error = "Min. 1"
             }
             updateTotal()
         }
@@ -205,7 +208,7 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
             } else {
                 etQuantity.setText("1")
                 selectedProducts[product.id] = product to 1
-                etQuantity.error = "Mínimo 1"
+                etQuantity.error = "Min 1"
             }
             updateTotal()
         }
@@ -216,8 +219,55 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
             updateTotal()
         }
 
+        if (product.id.startsWith("custom_")) {
+            btnEdit.visibility = View.VISIBLE
+            btnEdit.setOnClickListener {
+                showEditCustomProductDialog(product.id)
+            }
+        } else {
+            btnEdit.visibility = View.GONE
+        }
+
         productViews[product.id] = view
         layoutProductsContainer.addView(view)
+    }
+
+    private fun showEditCustomProductDialog(productId: String) {
+        val (product, quantity) = selectedProducts[productId] ?: return
+
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_add_custom_product, null)
+        val etName = dialogView.findViewById<EditText>(R.id.etCustomProductName)
+        val etPrice = dialogView.findViewById<EditText>(R.id.etCustomProductPrice)
+
+        etName.setText(product.name)
+        etPrice.setText(product.price.toString())
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Edit Custom Product")
+            .setView(dialogView)
+            .setPositiveButton("Update") { _, _ ->
+                val name = etName.text.toString().trim()
+                val price = etPrice.text.toString().toDoubleOrNull()
+
+                if (name.isNotEmpty() && price != null && price > 0) {
+                    val updatedProduct = product.copy(name = name, price = price)
+                    selectedProducts[productId] = Pair(updatedProduct, quantity)
+                    refreshProductListLayout()
+                    updateTotal()
+                } else {
+                    Toast.makeText(requireContext(), "Enter a valid name and price", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun refreshProductListLayout() {
+        layoutProductsContainer.removeAllViews()
+        selectedProducts.forEach { (_, pair) ->
+            val (product, _) = pair
+            addProductView(product)
+        }
     }
 
     private fun incrementQuantity(productId: String) {
@@ -283,6 +333,40 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
         }.addOnFailureListener {
             Toast.makeText(requireContext(), "Error saving invoice", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun addOrUpdateProduct(product: Product) {
+        val existingProduct = selectedProducts[product.id]
+        if (existingProduct != null) {
+            incrementQuantity(product.id)
+        } else {
+            selectedProducts[product.id] = Pair(product, 1)
+            addProductView(product)
+        }
+        updateTotal()
+    }
+
+    private fun showAddCustomProductDialog() {
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_add_custom_product, null)
+        val etName = dialogView.findViewById<EditText>(R.id.etCustomProductName)
+        val etPrice = dialogView.findViewById<EditText>(R.id.etCustomProductPrice)
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Customized Product")
+            .setView(dialogView)
+            .setPositiveButton("Add") { _, _ ->
+                val name = etName.text.toString().trim()
+                val price = etPrice.text.toString().toDoubleOrNull()
+
+                if (name.isNotEmpty() && price != null && price > 0) {
+                    val customProduct = Product(id = "custom_${System.currentTimeMillis()}", name = name, price = price)
+                    addOrUpdateProduct(customProduct)
+                } else {
+                    Toast.makeText(requireContext(), "Enter a valid name and price", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     override fun getTheme(): Int = R.style.CustomBottomSheetDialogTheme
