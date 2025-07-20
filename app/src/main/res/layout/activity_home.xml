@@ -75,7 +75,7 @@
             android:layout_width="match_parent"
             android:layout_height="48dp"
             android:layout_marginBottom="16dp"
-            android:background="@drawable/input_background"
+            android:background="@drawable/input_backgroundsearch"
             android:hint="Search"
             android:inputType="text"
             android:paddingStart="40dp"
