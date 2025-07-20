@@ -6,6 +6,7 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -33,8 +34,7 @@ class HomeActivity : AppCompatActivity(),
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
-
-        val addButton = findViewById<Button>(R.id.btnAgregarCita)
+        val addButton = findViewById<ImageButton>(R.id.btnAgregarCita)
         addButton.setOnClickListener {
             val bottomSheet = AddAppointmentBottomSheet()
             bottomSheet.show(supportFragmentManager, "AddAppointmentBottomSheet")

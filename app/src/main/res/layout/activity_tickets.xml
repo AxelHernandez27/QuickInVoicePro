@@ -29,20 +29,21 @@
             android:textSize="24sp"
             android:textStyle="bold"
             android:textColor="#000000"
+            android:layout_marginTop="16dp"
             android:layout_marginBottom="16dp" />
 
         <!-- Botón Agregar Ticket alineado a la derecha -->
-        <Button
+        <ImageButton
             android:id="@+id/btnAgregarTicket"
-            android:layout_width="wrap_content"
-            android:layout_height="50dp"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
             android:layout_gravity="end"
             android:layout_marginBottom="16dp"
             android:background="@drawable/btn_green_rounded"
-            android:text="Add Ticket"
-            android:textAllCaps="false"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp" />
+            android:src="@drawable/add"
+            android:contentDescription="Agregar ticket"
+            android:scaleType="centerInside"
+            android:elevation="4dp"/>
 
         <!-- Buscador de tickets -->
         <EditText

@@ -27,6 +27,7 @@
             android:text="Next appointments"
             android:textColor="#000000"
             android:textSize="22sp"
+            android:layout_marginTop="16dp"
             android:textStyle="bold" />
 
         <!-- Contenedor horizontal para los dos botones -->
@@ -37,17 +38,17 @@
             android:orientation="horizontal"
             android:layout_marginBottom="16dp">
 
-            <Button
+            <ImageButton
                 android:id="@+id/btnAgregarCita"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:paddingHorizontal="20dp"
-                android:text="Add Appointment"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_gravity="end"
+                android:layout_marginBottom="16dp"
                 android:background="@drawable/btn_green_rounded"
-                android:elevation="4sp" />
+                android:src="@drawable/add"
+                android:contentDescription="Agregar cita"
+                android:scaleType="centerInside"
+                android:elevation="4dp"/>
 
             <!-- Espacio entre botones -->
             <Space

@@ -5,6 +5,7 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -29,7 +30,7 @@ class ProductActivity : AppCompatActivity(),
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_products)
 
-        val buttonAdd = findViewById<Button>(R.id.btnAgregarProducto)
+        val buttonAdd = findViewById<ImageButton>(R.id.btnAgregarProducto)
         buttonAdd.setOnClickListener {
             val bottomSheet = AddProductBottomSheet()
             bottomSheet.show(supportFragmentManager, "AddProductBottomSheet")

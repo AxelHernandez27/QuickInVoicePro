@@ -7,6 +7,7 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -33,7 +34,7 @@ class CustomerActivity : AppCompatActivity(),
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_customer)
 
-        val addButton = findViewById<Button>(R.id.btnAgregarCliente)
+        val addButton = findViewById<ImageButton>(R.id.btnAgregarCliente)
         addButton.setOnClickListener {
             val bottomSheet = AddCustomerBottomSheet(this)
             bottomSheet.show(supportFragmentManager, "AddCustomerBottomSheet")

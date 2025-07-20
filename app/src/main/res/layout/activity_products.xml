@@ -27,22 +27,21 @@
         android:textSize="24sp"
         android:textStyle="bold"
         android:textColor="#000000"
+        android:layout_marginTop="16dp"
         android:layout_marginBottom="16dp" />
 
         <!-- Add Product Button Modern Style -->
-        <Button
+        <ImageButton
             android:id="@+id/btnAgregarProducto"
-            android:layout_width="wrap_content"
+            android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_gravity="end"
             android:layout_marginBottom="16dp"
-            android:paddingHorizontal="20dp"
-            android:text="Add Products"
-            android:textAllCaps="false"
-            android:textColor="#FFFFFF"
-            android:textSize="16sp"
             android:background="@drawable/btn_green_rounded"
-            android:elevation="4sp" />
+            android:src="@drawable/add"
+            android:contentDescription="Agregar productos"
+            android:scaleType="centerInside"
+            android:elevation="4dp" />
 
         <!-- Search Field -->
         <EditText

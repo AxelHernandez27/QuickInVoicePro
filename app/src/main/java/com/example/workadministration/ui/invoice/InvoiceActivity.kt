@@ -8,6 +8,7 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.registerForActivityResult
@@ -41,7 +42,7 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_tickets)
 
-        val btnAgregar = findViewById<Button>(R.id.btnAgregarTicket)
+        val btnAgregar = findViewById<ImageButton>(R.id.btnAgregarTicket)
         btnAgregar.setOnClickListener {
             val bottomSheet = AddInvoiceBottomSheet()
             bottomSheet.show(supportFragmentManager, "AddInvoiceBottomSheet")
