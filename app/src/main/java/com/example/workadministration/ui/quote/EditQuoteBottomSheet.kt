@@ -1,5 +1,6 @@
-package com.example.workadministration.ui.invoice
+package com.example.workadministration.ui.quote
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -17,16 +18,16 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import java.util.UUID
 
-class EditInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomSheet.OnCustomerAddedListener {
+class EditQuoteBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomSheet.OnCustomerAddedListener {
 
-    interface OnInvoiceUpdatedListener {
-        fun onInvoiceUpdated()
+    interface OnQuoteUpdatedListener {
+        fun onQuoteUpdated()
     }
 
-    private var listener: OnInvoiceUpdatedListener? = null
+    private var listener: OnQuoteUpdatedListener? = null
     private lateinit var customerAdapter: ArrayAdapter<String>
 
-    fun setOnInvoiceUpdatedListener(listener: OnInvoiceUpdatedListener) {
+    fun setOnQuoteUpdatedListener(listener: OnQuoteUpdatedListener) {
         this.listener = listener
     }
 
@@ -50,15 +51,15 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShe
     private var subtotal = 0.0
     private var extraCharges = 0.0
 
-    private var invoiceId: String? = null
+    private var quoteId: String? = null
 
     companion object {
-        private const val ARG_INVOICE_ID = "invoiceId"
+        private const val ARG_QUOTE_ID = "quoteId"
 
-        fun newInstance(invoiceId: String): EditInvoiceBottomSheet {
-            val fragment = EditInvoiceBottomSheet()
+        fun newInstance(quoteId: String): EditQuoteBottomSheet {
+            val fragment = EditQuoteBottomSheet()
             val bundle = Bundle()
-            bundle.putString(ARG_INVOICE_ID, invoiceId)
+            bundle.putString(ARG_QUOTE_ID, quoteId)
             fragment.arguments = bundle
             return fragment
         }
@@ -66,8 +67,8 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShe
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        invoiceId = arguments?.getString(ARG_INVOICE_ID)
-        if (invoiceId == null) {
+        quoteId = arguments?.getString(ARG_QUOTE_ID)
+        if (quoteId == null) {
             dismiss()
         }
     }
@@ -89,7 +90,7 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShe
 
         loadClients {
             loadProducts {
-                loadInvoiceData()
+                loadQuoteData()
             }
         }
 
@@ -107,7 +108,7 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShe
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
 
-        btnSave.setOnClickListener { updateInvoice() }
+        btnSave.setOnClickListener { updateQuote() }
         btnCancel.setOnClickListener { dismiss() }
 
         btnAddCustomProduct.setOnClickListener { showAddCustomProductDialog() }
@@ -115,9 +116,9 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShe
         return view
     }
 
-    private fun loadInvoiceData() {
-        invoiceId?.let { id ->
-            db.collection("invoices").document(id).get().addOnSuccessListener { doc ->
+    private fun loadQuoteData() {
+        quoteId?.let { id ->
+            db.collection("quotes").document(id).get().addOnSuccessListener { doc ->
                 val customerName = doc.getString("customerName") ?: ""
                 autoCompleteClient.setText(customerName)
                 selectedCustomer = allCustomers.find { it.fullname == customerName }
@@ -126,7 +127,7 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShe
                 extraCharges = doc.getDouble("extraCharges") ?: 0.0
                 etExtraCharges.setText(extraCharges.toString())
 
-                db.collection("invoices").document(id).collection("invoiceDetails")
+                db.collection("quotes").document(id).collection("quoteDetails")
                     .get().addOnSuccessListener { details ->
                         details.forEach { detailDoc ->
                             val product = Product(
@@ -275,8 +276,9 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShe
         }
     }
 
+    @SuppressLint("MissingInflatedId")
     private fun addProductView(product: Product, quantity: Int, isCustom: Boolean) {
-        val view = LayoutInflater.from(requireContext()).inflate(R.layout.item_invoice_product, layoutProductsContainer, false)
+        val view = LayoutInflater.from(requireContext()).inflate(R.layout.item_quote_product, layoutProductsContainer, false)
         view.findViewById<TextView>(R.id.tvProductName).text = product.name
         view.findViewById<TextView>(R.id.tvProductPrice).text = "$%.2f".format(product.price)
         val btnDelete = view.findViewById<ImageButton>(R.id.btnDeleteProduct)
@@ -307,7 +309,7 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShe
         tvTotalAmount.text = "$%.2f".format(total)
     }
 
-    private fun updateInvoice() {
+    private fun updateQuote() {
         if (selectedCustomer == null) {
             Toast.makeText(requireContext(), "Please select a client", Toast.LENGTH_SHORT).show()
             return
@@ -320,7 +322,7 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShe
         val notes = etAdditionalNotes.text.toString().trim()
         val total = subtotal + extraCharges
 
-        val invoiceData = mapOf(
+        val quoteData = mapOf(
             "customerId" to selectedCustomer!!.id,
             "customerName" to selectedCustomer!!.fullname,
             "customerAddress" to selectedCustomer!!.address,
@@ -329,11 +331,11 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShe
             "total" to total
         )
 
-        invoiceId?.let { id ->
-            db.collection("invoices").document(id)
-                .set(invoiceData, SetOptions.merge())
+        quoteId?.let { id ->
+            db.collection("quotes").document(id)
+                .set(quoteData, SetOptions.merge())
                 .addOnSuccessListener {
-                    val detailsRef = db.collection("invoices").document(id).collection("invoiceDetails")
+                    val detailsRef = db.collection("quotes").document(id).collection("quoteDetails")
                     detailsRef.get().addOnSuccessListener { existing ->
                         existing.forEach { it.reference.delete() }
                         selectedProducts.forEach { product ->
@@ -344,13 +346,13 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShe
                             )
                             detailsRef.add(detail)
                         }
-                        Toast.makeText(requireContext(), "Invoice updated", Toast.LENGTH_SHORT).show()
-                        listener?.onInvoiceUpdated()
+                        Toast.makeText(requireContext(), "Quote updated", Toast.LENGTH_SHORT).show()
+                        listener?.onQuoteUpdated()
                         dismiss()
                     }
                 }
                 .addOnFailureListener {
-                    Toast.makeText(requireContext(), "Error updating invoice", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "Error updating quote", Toast.LENGTH_SHORT).show()
                 }
         }
     }

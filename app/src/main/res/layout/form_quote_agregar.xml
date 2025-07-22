@@ -1,0 +1,195 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#FFFFFF"
+    android:padding="24dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:text="Add Quote"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            android:layout_marginBottom="24dp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <!-- Client Selector -->
+        <TextView
+            android:text="Select Client"
+            android:textSize="16sp"
+            android:textColor="#000000"
+            android:layout_marginBottom="8dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <AutoCompleteTextView
+            android:id="@+id/autoCompleteClient"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Search client"
+            android:background="@drawable/input_background"
+            android:padding="12dp"
+            android:textColor="#000000"
+            android:textColorHint="#999999"
+            android:layout_marginBottom="16dp"/>
+
+        <Button
+            android:id="@+id/btnAddClient"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Add New Client"
+            android:background="@drawable/rounded_button_blue"
+            android:textColor="#FFFFFF"
+            android:textAllCaps="false"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- Product List -->
+        <TextView
+            android:text="Products"
+            android:textSize="16sp"
+            android:textColor="#000000"
+            android:layout_marginBottom="8dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
+
+        <LinearLayout
+            android:id="@+id/layoutProductsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="16dp"/>
+
+        <AutoCompleteTextView
+            android:id="@+id/autoCompleteProduct"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Add product"
+            android:background="@drawable/input_background"
+            android:padding="12dp"
+            android:textColor="#000000"
+            android:textColorHint="#999999"
+            android:layout_marginBottom="24dp"/>
+
+        <Button
+            android:id="@+id/btnAddCustomProduct"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Add Custom Product"
+            android:background="@drawable/rounded_button_blue"
+            android:textColor="#FFFFFF"
+            android:textAllCaps="false"
+            android:layout_marginBottom="24dp"/>
+
+        <!-- Subtotal -->
+        <LinearLayout
+            android:orientation="horizontal"
+            android:gravity="end"
+            android:layout_marginBottom="24dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:text="Subtotal:"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#000000"
+                android:layout_marginEnd="8dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+
+            <TextView
+                android:id="@+id/tvSubtotalAmount"
+                android:text="$0.00"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#000000"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
+
+        <!-- Extra Charges -->
+        <EditText
+            android:id="@+id/etExtraCharges"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Extra Charges"
+            android:inputType="numberDecimal"
+            android:background="@drawable/input_background"
+            android:padding="12dp"
+            android:textColor="#000000"
+            android:textColorHint="#999999"
+            android:layout_marginBottom="16dp"/>
+
+        <!-- Notes -->
+        <EditText
+            android:id="@+id/etAdditionalNotes"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Notes"
+            android:background="@drawable/input_background"
+            android:padding="12dp"
+            android:minLines="3"
+            android:inputType="textMultiLine"
+            android:textColor="#000000"
+            android:textColorHint="#999999"
+            android:layout_marginBottom="24dp"/>
+
+        <!-- Total -->
+        <LinearLayout
+            android:orientation="horizontal"
+            android:gravity="end"
+            android:layout_marginBottom="24dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:text="Total:"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#000000"
+                android:layout_marginEnd="8dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+
+            <TextView
+                android:id="@+id/tvTotalAmount"
+                android:text="$0.00"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#000000"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:gravity="end"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <Button
+                android:id="@+id/btnCancel"
+                android:text="Cancel"
+                android:background="@drawable/rounded_button_red"
+                android:textColor="#FFFFFF"
+                android:textAllCaps="false"
+                android:layout_marginEnd="8dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+
+            <Button
+                android:id="@+id/btnSave"
+                android:text="Save"
+                android:background="@drawable/rounded_button_green"
+                android:textColor="#FFFFFF"
+                android:textAllCaps="false"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

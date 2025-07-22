@@ -9,6 +9,7 @@
     >
 
     <LinearLayout
+        android:id="@+id/quotesContainer"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
@@ -19,54 +20,29 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
+        <!-- Título Quotes -->
         <TextView
-            android:id="@+id/title"
+            android:id="@+id/tvTituloAppointments"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:text="Next appointments"
+            android:text="Next Appointments"
+            android:textSize="24sp"
+            android:textStyle="bold"
             android:textColor="#000000"
-            android:textSize="22sp"
             android:layout_marginTop="16dp"
-            android:textStyle="bold" />
+            android:layout_marginBottom="16dp" />
 
-        <!-- Contenedor horizontal para los dos botones -->
-        <LinearLayout
-            android:layout_width="wrap_content"
+        <ImageButton
+            android:id="@+id/btnAgregarCita"
+            android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_gravity="end"
-            android:orientation="horizontal"
-            android:layout_marginBottom="16dp">
-
-            <ImageButton
-                android:id="@+id/btnAgregarCita"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:layout_gravity="end"
-                android:layout_marginBottom="16dp"
-                android:background="@drawable/btn_green_rounded"
-                android:src="@drawable/add"
-                android:contentDescription="Agregar cita"
-                android:scaleType="centerInside"
-                android:elevation="4dp"/>
-
-            <!-- Espacio entre botones -->
-            <Space
-                android:layout_width="12dp"
-                android:layout_height="match_parent" />
-
-            <Button
-                android:id="@+id/btnQuote"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:paddingHorizontal="20dp"
-                android:text="Quote"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:background="@drawable/btn_green_rounded"
-                android:elevation="4sp" />
-        </LinearLayout>
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/btn_green_rounded"
+            android:src="@drawable/add"
+            android:contentDescription="Agregar Cita"
+            android:scaleType="centerInside"
+            android:elevation="4dp"/>
 
 
         <!-- Search Field -->
