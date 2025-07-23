@@ -124,7 +124,7 @@ class GeneratePdfActivity : AppCompatActivity() {
 
         yPosition += 25f
 
-        val billToX = pageWidth - (pageWidth / 3f)
+        val billToX = (pageWidth / 2f) - 15f  // Centramos el bloque en el medio aprox
         val boxHeight = 20f
         paint.color = Color.parseColor("#8AB6B6")
         canvas.drawRect(billToX - 10f, yPosition, pageWidth - 20f, yPosition + boxHeight, paint)

@@ -5,8 +5,10 @@ import android.view.LayoutInflater
 import android.widget.Button
 import android.widget.FrameLayout
 import androidx.appcompat.app.AppCompatActivity
+import com.example.workadministration.ui.NavigationUtil
 import com.example.workadministration.ui.appointment.AppointmentFragment
 import com.example.workadministration.ui.quote.QuoteFragment
+import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class HomeActivity : AppCompatActivity() {
 
@@ -17,6 +19,9 @@ class HomeActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.fragment_home)
+
+        val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNavigation)
+        NavigationUtil.setupNavigation(this, bottomNav, R.id.nav_home)
 
         btnAppointments = findViewById(R.id.btnAppointments)
         btnQuotes = findViewById(R.id.btnQuotes)

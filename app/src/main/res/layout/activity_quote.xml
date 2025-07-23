@@ -70,16 +70,5 @@
             android:paddingBottom="8dp"
             tools:itemCount="3"
             tools:listitem="@layout/item_quote" />
-
-        <com.google.android.material.bottomnavigation.BottomNavigationView
-            android:id="@+id/bottomNavigation"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="bottom"
-            android:background="@color/white"
-            app:itemIconTint="@color/selector_nav"
-            app:itemTextColor="@color/selector_nav"
-            app:labelVisibilityMode="labeled"
-            app:menu="@menu/bottom_nav_menu" />
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

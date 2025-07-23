@@ -66,9 +66,6 @@ class QuoteFragment : Fragment(), AddCustomerBottomSheet.OnCustomerAddedListener
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
 
-        val bottomNav = view.findViewById<BottomNavigationView>(R.id.bottomNavigation)
-        NavigationUtil.setupNavigation(requireActivity(), bottomNav, R.id.nav_home)
-
         getQuotes()
         return view
     }
