@@ -1,17 +1,12 @@
 package com.example.workadministration.ui.quote
 
 import android.annotation.SuppressLint
-import android.app.Activity
-import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.registerForActivityResult
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -44,7 +39,7 @@ class QuoteActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAdde
 
         val btnAgregar = findViewById<ImageButton>(R.id.btnAgregarQuote)
         btnAgregar.setOnClickListener {
-            val bottomSheet = AddQuoteBottomSheet()
+            val bottomSheet = AddQuoteBottomSheet(this)
             bottomSheet.show(supportFragmentManager, "AddQuoteBottomSheet")
         }
 

@@ -17,13 +17,13 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 
-class AddQuoteBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomSheet.OnCustomerAddedListener {
+class AddQuoteBottomSheet(private var listener: OnQuoteSavedListener) : BottomSheetDialogFragment(), AddCustomerBottomSheet.OnCustomerAddedListener {
 
     interface OnQuoteSavedListener {
         fun onQuoteSaved()
     }
 
-    private lateinit var listener: OnQuoteSavedListener
+    //private lateinit var listener: OnQuoteSavedListener
     private lateinit var customerAdapter: ArrayAdapter<String>
 
     private lateinit var autoCompleteClient: AutoCompleteTextView
@@ -45,15 +45,6 @@ class AddQuoteBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomSheet.
     private var selectedCustomer: Customer? = null
     private var subtotal = 0.0
     private var extraCharges = 0.0
-
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-        if (context is OnQuoteSavedListener) {
-            listener = context
-        } else {
-            throw RuntimeException("$context must implement OnQuoteSavedListener")
-        }
-    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.form_quote_agregar, container, false)

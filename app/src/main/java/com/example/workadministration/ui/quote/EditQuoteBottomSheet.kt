@@ -74,7 +74,7 @@ class EditQuoteBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomSheet
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        val view = inflater.inflate(R.layout.form_ticket_editar, container, false)
+        val view = inflater.inflate(R.layout.form_quote_editar, container, false)
 
         autoCompleteClient = view.findViewById(R.id.autoCompleteClient)
         val btnAddClient = view.findViewById<Button>(R.id.btnAddClient)

@@ -1,250 +1,177 @@
 package com.example.workadministration.ui.quote
 
-class QuoteFragment {
-}
-
-
-import android.content.ActivityNotFoundException
-import android.content.Intent
-import android.graphics.*
-import android.graphics.pdf.PdfDocument
-import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
+import android.text.Editable
+import android.text.TextWatcher
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.FileProvider
+import androidx.fragment.app.Fragment
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.workadministration.R
+import com.example.workadministration.ui.NavigationUtil
+import com.example.workadministration.ui.customer.AddCustomerBottomSheet
+import com.example.workadministration.ui.customer.Customer
+import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.firestore.FirebaseFirestore
-import java.io.File
-import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
 
-class GeneratePdfActivity : AppCompatActivity() {
+class QuoteFragment : Fragment(), AddCustomerBottomSheet.OnCustomerAddedListener, AddQuoteBottomSheet.OnQuoteSavedListener {
 
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var searchQuote: EditText
+    private lateinit var adapter: QuoteAdapter
+    private val quoteList = mutableListOf<Quote>()
     private val db = FirebaseFirestore.getInstance()
-    private var invoiceId: String? = null
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        invoiceId = intent.getStringExtra("invoiceId")
+    override fun onCustomerAdded(customer: Customer) {}
 
-        if (invoiceId.isNullOrEmpty()) {
-            Toast.makeText(this, "Invoice ID not found", Toast.LENGTH_SHORT).show()
-            finish()
-            return
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
+        val view = inflater.inflate(R.layout.activity_quote, container, false)
+
+        val btnAgregar = view.findViewById<ImageButton>(R.id.btnAgregarQuote)
+        btnAgregar.setOnClickListener {
+            val bottomSheet = AddQuoteBottomSheet(this) // 'this' porque QuoteFragment implementa OnQuoteSavedListener
+            bottomSheet.show(parentFragmentManager, "AddQuoteBottomSheet")
         }
 
-        fetchInvoiceData()
+
+        recyclerView = view.findViewById(R.id.recyclerQuotes)
+        recyclerView.layoutManager = LinearLayoutManager(requireContext())
+
+        adapter = QuoteAdapter(
+            quoteList,
+            requireContext(),
+            onDeleteClick = { quote -> confirmDelete(quote) },
+            onEditClick = { quote -> openEditScreen(quote) },
+        )
+        recyclerView.adapter = adapter
+
+        searchQuote = view.findViewById(R.id.buscarQuote)
+        searchQuote.addTextChangedListener(object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+                filterQuotes(s.toString())
+            }
+
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
+
+        val bottomNav = view.findViewById<BottomNavigationView>(R.id.bottomNavigation)
+        NavigationUtil.setupNavigation(requireActivity(), bottomNav, R.id.nav_home)
+
+        getQuotes()
+        return view
     }
 
-    private fun fetchInvoiceData() {
-        db.collection("invoices").document(invoiceId!!)
+    override fun onQuoteSaved() {
+        getQuotes()
+    }
+
+    private fun getQuotes() {
+        db.collection("quotes")
+            .orderBy("date", com.google.firebase.firestore.Query.Direction.DESCENDING)
             .get()
-            .addOnSuccessListener { doc ->
-                if (doc.exists()) {
-                    val customerId = doc.getString("customerId") ?: ""
-                    val total = doc.getDouble("total") ?: 0.0
-                    val notes = doc.getString("notes") ?: ""
-                    val extra = doc.getDouble("extraCharges") ?: 0.0
-                    val date = doc.getTimestamp("date")?.toDate() ?: Date()
+            .addOnSuccessListener { quotesSnapshot ->
 
-                    db.collection("customers").document(customerId)
+                quoteList.clear()
+
+                for (quoteDoc in quotesSnapshot) {
+                    val quoteId = quoteDoc.id
+                    val customerId = quoteDoc.getString("customerId") ?: ""
+                    val customerName = quoteDoc.getString("customerName") ?: ""
+                    val customerAddress = quoteDoc.getString("customerAddress") ?: ""
+                    val timestamp = quoteDoc.getTimestamp("date")
+                    val dateFormatted = if (timestamp != null) {
+                        val dateObj = timestamp.toDate()
+                        val formatter = SimpleDateFormat("MM/dd/yyyy hh:mm a", Locale("en", "US"))
+                        formatter.timeZone = TimeZone.getTimeZone("America/Mexico_City")
+                        formatter.format(dateObj)
+                    } else {
+                        ""
+                    }
+
+                    val extraCharges = quoteDoc.getDouble("extraCharges") ?: 0.0
+                    val notes = quoteDoc.getString("notes") ?: ""
+                    val total = quoteDoc.getDouble("total") ?: 0.0
+
+                    db.collection("quotes").document(quoteId)
+                        .collection("quoteDetails")
                         .get()
-                        .addOnSuccessListener { customerDoc ->
-                            val customerName = customerDoc.getString("fullname") ?: ""
-                            val customerAddress = customerDoc.getString("address") ?: ""
-                            val customerPhone = customerDoc.getString("phone") ?: ""
-                            val customerEmail = customerDoc.getString("email") ?: ""
+                        .addOnSuccessListener { detailsSnapshot ->
+                            val products = detailsSnapshot.map { detailDoc ->
+                                ProductDetail(
+                                    productId = detailDoc.getString("productId") ?: "",
+                                    name = detailDoc.getString("productName") ?: "",
+                                    price = detailDoc.getDouble("price") ?: 0.0
+                                )
+                            }
 
-                            db.collection("invoices").document(invoiceId!!)
-                                .collection("invoiceDetails")
-                                .get()
-                                .addOnSuccessListener { details ->
-                                    val products = details.map {
-                                        val name = it.getString("name") ?: ""
-                                        val price = it.getDouble("price") ?: 0.0
-                                        val quantity = it.getLong("quantity")?.toInt() ?: 1
-                                        Triple(name, price, quantity)
-                                    }
-                                    generatePDF(customerName, customerAddress, customerPhone, customerEmail, date, total, notes, extra, products)
-                                }
+                            val quote = Quote(
+                                id = quoteId,
+                                customerId = customerId,
+                                customerName = customerName,
+                                customerAddress = customerAddress,
+                                date = dateFormatted,
+                                extraCharges = extraCharges,
+                                notes = notes,
+                                total = total,
+                                products = products
+                            )
+
+                            quoteList.add(quote)
+                            adapter.notifyDataSetChanged()
                         }
-                } else {
-                    Toast.makeText(this, "Invoice not found", Toast.LENGTH_SHORT).show()
-                    finish()
                 }
             }
+    }
+
+    private fun filterQuotes(text: String) {
+        val filteredList = quoteList.filter {
+            it.customerName.contains(text, ignoreCase = true) ||
+                    it.date.contains(text, ignoreCase = true)
+        }
+        adapter.updateList(filteredList)
+    }
+
+    private fun openEditScreen(quote: Quote) {
+        val editQuoteSheet = EditQuoteBottomSheet.newInstance(quote.id)
+        editQuoteSheet.setOnQuoteUpdatedListener(object : EditQuoteBottomSheet.OnQuoteUpdatedListener {
+            override fun onQuoteUpdated() {
+                getQuotes()
+            }
+        })
+        editQuoteSheet.show(parentFragmentManager, "EditQuoteBottomSheet")
+    }
+
+    private fun deleteQuote(quote: Quote) {
+        db.collection("quotes").document(quote.id)
+            .delete()
+            .addOnSuccessListener {
+                quoteList.remove(quote)
+                adapter.updateList(quoteList)
+            }
             .addOnFailureListener {
-                Toast.makeText(this, "Error fetching invoice", Toast.LENGTH_SHORT).show()
-                finish()
+                Toast.makeText(requireContext(), "Error deleting quote", Toast.LENGTH_SHORT).show()
             }
     }
 
-    private fun generatePDF(customerName: String, customerAddress: String, customerPhone: String, customerEmail: String, date: Date, total: Double, notes: String, extra: Double, products: List<Triple<String, Double, Int>>) {
-
-        val pdfDocument = PdfDocument()
-        val pageWidth = 400
-        val pageHeight = 750 + (products.size * 35)
-        val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create()
-        val page = pdfDocument.startPage(pageInfo)
-        val canvas = page.canvas
-        val paint = Paint()
-
-        val logo = BitmapFactory.decodeResource(resources, R.drawable.logo1)
-        val scaledWatermark = Bitmap.createScaledBitmap(logo, 300, 300, false)
-
-        val watermarkPaint = Paint()
-        watermarkPaint.alpha = 30
-
-        val watermarkX = (pageWidth - scaledWatermark.width) / 2f
-        val watermarkY = (pageHeight - scaledWatermark.height) / 2f
-
-        canvas.drawBitmap(scaledWatermark, watermarkX, watermarkY, watermarkPaint)
-        var yPosition = 40f
-
-        paint.textAlign = Paint.Align.CENTER
-        paint.typeface = Typeface.create(Typeface.DEFAULT_BOLD, Typeface.BOLD_ITALIC)
-        paint.textSize = 22f
-        canvas.drawText("Invoice Service", pageWidth / 2f, yPosition, paint)
-        paint.color = Color.parseColor("#8AB6B6")
-        canvas.drawLine(50f, yPosition + 5f, pageWidth - 50f, yPosition + 5f, paint)
-
-        yPosition += 40f
-        paint.color = Color.BLACK
-        paint.textAlign = Paint.Align.CENTER
-        paint.textSize = 12f
-        paint.typeface = Typeface.DEFAULT_BOLD
-        canvas.drawText("Invoice Date", pageWidth / 2f, yPosition, paint)
-
-        yPosition += 15f
-        val formatter = SimpleDateFormat("MMMM dd, yyyy HH:mm", Locale.ENGLISH)
-        formatter.timeZone = TimeZone.getTimeZone("America/Mexico_City")
-        val formattedDate = formatter.format(date)
-
-        paint.typeface = Typeface.DEFAULT
-        canvas.drawText(formattedDate, pageWidth / 2f, yPosition, paint)
-
-        yPosition += 25f
-
-        val billToX = pageWidth - (pageWidth / 3f)
-        val boxHeight = 20f
-        paint.color = Color.parseColor("#8AB6B6")
-        canvas.drawRect(billToX - 10f, yPosition, pageWidth - 20f, yPosition + boxHeight, paint)
-
-        yPosition += 15f
-        paint.color = Color.BLACK
-        paint.textAlign = Paint.Align.LEFT
-        paint.textSize = 10f
-        paint.typeface = Typeface.DEFAULT_BOLD
-        canvas.drawText("BILL TO:", billToX, yPosition, paint)
-
-        yPosition += 15f
-        canvas.drawText(customerName, billToX, yPosition, paint)
-
-        yPosition += 15f
-        paint.typeface = Typeface.DEFAULT
-        canvas.drawText(customerAddress, billToX, yPosition, paint)
-        yPosition += 15f
-        canvas.drawText(customerPhone, billToX, yPosition, paint)
-        yPosition += 15f
-        canvas.drawText(customerEmail, billToX, yPosition, paint)
-
-        yPosition += 30f
-
-        paint.color = Color.parseColor("#8AB6B6")
-        canvas.drawRect(20f, yPosition, pageWidth - 20f, yPosition + 20f, paint)
-
-        paint.color = Color.BLACK
-        paint.textSize = 10f
-        paint.typeface = Typeface.DEFAULT_BOLD
-        paint.textAlign = Paint.Align.LEFT
-        canvas.drawText("Description", 25f, yPosition + 15f, paint)
-        canvas.drawText("Qty", 150f, yPosition + 15f, paint)
-        canvas.drawText("Unit", 200f, yPosition + 15f, paint)
-        paint.textAlign = Paint.Align.RIGHT
-        canvas.drawText("Amount", pageWidth - 25f, yPosition + 15f, paint)
-        yPosition += 35f
-
-        products.forEachIndexed { index, (desc, price, quantity) ->
-            if (index % 2 == 1) {
-                paint.color = Color.argb(30, 0, 0, 0)
-                canvas.drawRect(20f, yPosition - 10f, pageWidth - 20f, yPosition + 10f, paint)
-            }
-            paint.color = Color.BLACK
-            paint.textAlign = Paint.Align.LEFT
-            paint.typeface = Typeface.DEFAULT
-            canvas.drawText(desc, 25f, yPosition, paint)
-            canvas.drawText(quantity.toString(), 150f, yPosition, paint)
-            canvas.drawText("$%.2f".format(price), 200f, yPosition, paint)
-            paint.textAlign = Paint.Align.RIGHT
-            canvas.drawText("$%.2f".format(price * quantity), pageWidth - 25f, yPosition, paint)
-            yPosition += 20f
-        }
-
-        listOf(
-            "Total Payment" to (total - extra),
-            "Extra Charges" to extra,
-            "Grand Total" to total
-        ).forEachIndexed { i, (label, amount) ->
-            if ((products.size + i) % 2 == 1) {
-                paint.color = Color.argb(30, 0, 0, 0)
-                canvas.drawRect(20f, yPosition - 10f, pageWidth - 20f, yPosition + 10f, paint)
-            }
-            paint.color = Color.BLACK
-            paint.textAlign = Paint.Align.LEFT
-            paint.typeface = Typeface.DEFAULT_BOLD
-            canvas.drawText(label, 25f, yPosition, paint)
-            paint.textAlign = Paint.Align.RIGHT
-            canvas.drawText("$%.2f".format(amount), pageWidth - 25f, yPosition, paint)
-            yPosition += 20f
-        }
-
-        yPosition += 40f
-
-        paint.textAlign = Paint.Align.LEFT
-        paint.typeface = Typeface.DEFAULT_BOLD
-        paint.textSize = 10f
-        canvas.drawText("Notes:", 25f, yPosition, paint)
-        yPosition += 15f
-        paint.typeface = Typeface.DEFAULT
-        canvas.drawText(notes, 25f, yPosition, paint)
-
-        yPosition += 60f
-
-        paint.textAlign = Paint.Align.CENTER
-        paint.typeface = Typeface.DEFAULT
-        canvas.drawText("_________________________", pageWidth / 2f, yPosition, paint)
-        yPosition += 15f
-        paint.typeface = Typeface.DEFAULT_BOLD
-        canvas.drawText(customerName, pageWidth / 2f, yPosition, paint)
-
-        pdfDocument.finishPage(page)
-
-        val safeName = customerName.replace("[^a-zA-Z0-9]".toRegex(), "").take(15)
-        val fileName = "${safeName}_${SimpleDateFormat("ddMMyyyy_HHmmss", Locale("es", "MX")).format(Date())}.pdf"
-        val filePath = File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), fileName)
-
-        pdfDocument.writeTo(FileOutputStream(filePath))
-        pdfDocument.close()
-
-        Toast.makeText(this, "PDF saved: ${filePath.absolutePath}", Toast.LENGTH_LONG).show()
-        openPDF(filePath)
-    }
-
-    private fun openPDF(file: File) {
-        val uri = FileProvider.getUriForFile(this, "$packageName.provider", file)
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, "application/pdf")
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-
-        try {
-            startActivity(intent)
-            finish()
-        } catch (e: ActivityNotFoundException) {
-            Toast.makeText(this, "No PDF viewer installed", Toast.LENGTH_SHORT).show()
-        }
+    private fun confirmDelete(quote: Quote) {
+        val alert = androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Delete Quote")
+            .setMessage("Are you sure you want to delete this quote?")
+            .setPositiveButton("Yes") { _, _ -> deleteQuote(quote) }
+            .setNegativeButton("Cancel", null)
+            .create()
+        alert.show()
     }
 }

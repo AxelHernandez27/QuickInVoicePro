@@ -21,7 +21,6 @@ class AddAppointmentBottomSheet : BottomSheetDialogFragment() {
         fun onAppointmentAdded(appointment: Appointment)
     }
 
-    private lateinit var listener: OnAppointmentAddedListener
     private lateinit var autoCompleteClient: AutoCompleteTextView
     private lateinit var etDate: EditText
     private lateinit var btnSave: Button
@@ -32,14 +31,12 @@ class AddAppointmentBottomSheet : BottomSheetDialogFragment() {
     private var selectedCustomer: Customer? = null
     private var selectedDate: Date? = null
 
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-        if (context is OnAppointmentAddedListener) {
-            listener = context
-        } else {
-            throw RuntimeException("$context must implement OnAppointmentAddedListener")
-        }
+    private var listener: OnAppointmentAddedListener? = null
+
+    fun setOnAppointmentAddedListener(listener: OnAppointmentAddedListener) {
+        this.listener = listener
     }
+
 
     override fun onCreateView(inflater: LayoutInflater, container: android.view.ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.form_cita_agregar, container, false)
@@ -147,7 +144,7 @@ class AddAppointmentBottomSheet : BottomSheetDialogFragment() {
                     date = selectedDate!!,
                     status = "pendiente"
                 )
-                listener.onAppointmentAdded(appointment)
+                listener?.onAppointmentAdded(appointment)
                 Toast.makeText(requireContext(), "Appointment added successfully", Toast.LENGTH_SHORT).show()
                 dismiss()
             }
