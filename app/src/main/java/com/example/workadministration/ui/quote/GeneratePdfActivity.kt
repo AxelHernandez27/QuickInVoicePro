@@ -182,7 +182,7 @@ class GeneratePdfActivity : AppCompatActivity() {
         listOf(
             "Total Payment" to (total - extra),
             "Extra Charges" to extra,
-            "Grand Total" to total
+            "Total" to total
         ).forEachIndexed { i, (label, amount) ->
             if ((products.size + i) % 2 == 1) {
                 paint.color = Color.argb(30, 0, 0, 0)
@@ -208,13 +208,6 @@ class GeneratePdfActivity : AppCompatActivity() {
         canvas.drawText(notes, 25f, yPosition, paint)
 
         yPosition += 60f
-
-        paint.textAlign = Paint.Align.CENTER
-        paint.typeface = Typeface.DEFAULT
-        canvas.drawText("_________________________", pageWidth / 2f, yPosition, paint)
-        yPosition += 15f
-        paint.typeface = Typeface.DEFAULT_BOLD
-        canvas.drawText(customerName, pageWidth / 2f, yPosition, paint)
 
         pdfDocument.finishPage(page)
 
