@@ -50,14 +50,21 @@ android {
     }
     packaging {
         resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += listOf(
+                "META-INF/DEPENDENCIES",
+                "META-INF/LICENSE",
+                "META-INF/LICENSE.txt",
+                "META-INF/license.txt",
+                "META-INF/NOTICE",
+                "META-INF/NOTICE.txt",
+                "META-INF/notice.txt"
+            )
         }
     }
 }
 
 dependencies {
-
-
+    // ---------- ANDROIDX ----------
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -71,6 +78,8 @@ dependencies {
     implementation(libs.androidx.recyclerview)
     implementation(libs.material)
     implementation(libs.androidx.room.runtime.android)
+
+    // ---------- TESTING ----------
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -79,14 +88,22 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    //---------------- FIREBASE ----------------
+    // ---------- FIREBASE ----------
     implementation(platform("com.google.firebase:firebase-bom:33.14.0"))
     implementation("com.google.firebase:firebase-analytics")
-    implementation ("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-auth") // Usa versión del BoM automáticamente
 
-    implementation ("androidx.credentials:credentials:1.3.0")
-    implementation ("androidx.credentials:credentials-play-services-auth:1.3.0")
-    implementation ("com.google.android.libraries.identity.googleid:googleid:1.1.1")
-    implementation ("com.google.firebase:firebase-auth:23.2.1")
-    implementation ("com.google.android.gms:play-services-auth:21.2.0")
+    // ---------- GOOGLE SIGN-IN ----------
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
+
+    // ---------- CREDENTIAL API (opcional para auth moderna) ----------
+    implementation("androidx.credentials:credentials:1.3.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
+
+    // ---------- GOOGLE CALENDAR API ----------
+    implementation("com.google.api-client:google-api-client-android:1.35.0")
+    implementation("com.google.oauth-client:google-oauth-client-jetty:1.34.1")
+
 }

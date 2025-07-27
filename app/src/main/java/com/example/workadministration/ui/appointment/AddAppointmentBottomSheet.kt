@@ -1,12 +1,20 @@
 package com.example.workadministration.ui.appointment
 
+import android.Manifest
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
+import android.provider.CalendarContract
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.*
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.example.workadministration.R
 import com.example.workadministration.ui.customer.Customer
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -37,8 +45,38 @@ class AddAppointmentBottomSheet : BottomSheetDialogFragment() {
         this.listener = listener
     }
 
+    private fun checkCalendarPermissions(): Boolean {
+        val readPermission = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_CALENDAR)
+        val writePermission = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_CALENDAR)
 
-    override fun onCreateView(inflater: LayoutInflater, container: android.view.ViewGroup?, savedInstanceState: Bundle?): View? {
+        if (readPermission != PackageManager.PERMISSION_GRANTED || writePermission != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                requireActivity(),
+                arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR),
+                1001
+            )
+            return false
+        }
+        return true
+    }
+
+    // Manejo de resultado de permisos
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 1001) {
+            if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
+                Toast.makeText(requireContext(), "Calendar permissions granted", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(requireContext(), "Calendar permissions denied", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: android.view.ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
         val view = inflater.inflate(R.layout.form_cita_agregar, container, false)
 
         autoCompleteClient = view.findViewById(R.id.autoCompleteClient)
@@ -61,13 +99,18 @@ class AddAppointmentBottomSheet : BottomSheetDialogFragment() {
             .addOnSuccessListener { documents ->
                 allCustomers = documents.map { it.toObject(Customer::class.java).copy(id = it.id) }
                 val names = allCustomers.map { it.fullname }
-                val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, names)
+                val adapter = ArrayAdapter(
+                    requireContext(),
+                    android.R.layout.simple_dropdown_item_1line,
+                    names
+                )
                 autoCompleteClient.setAdapter(adapter)
 
                 autoCompleteClient.setOnItemClickListener { _, _, position, _ ->
                     val name = adapter.getItem(position)
                     selectedCustomer = allCustomers.find { it.fullname == name }
-                    autoCompleteClient.error = null // Limpiar el error al seleccionar un cliente válido
+                    autoCompleteClient.error =
+                        null // Limpiar el error al seleccionar un cliente válido
                 }
 
                 autoCompleteClient.setOnClickListener {
@@ -96,7 +139,11 @@ class AddAppointmentBottomSheet : BottomSheetDialogFragment() {
 
                 // Validación de no permitir fechas/horas pasadas
                 if (selected.before(now.time)) {
-                    Toast.makeText(requireContext(), "You cannot select a past date or time", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        requireContext(),
+                        "You cannot select a past date or time",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     etDate.text.clear()
                     selectedDate = null
                 } else {
@@ -114,13 +161,11 @@ class AddAppointmentBottomSheet : BottomSheetDialogFragment() {
     private fun saveAppointment() {
         val clientName = autoCompleteClient.text.toString().trim()
 
-        // Validación campo cliente
         if (clientName.isEmpty() || selectedCustomer == null) {
             autoCompleteClient.error = "Please select a client"
             return
         }
 
-        // Validación campo fecha
         if (selectedDate == null) {
             etDate.error = "Please select date and time"
             return
@@ -145,12 +190,77 @@ class AddAppointmentBottomSheet : BottomSheetDialogFragment() {
                     status = "pendiente"
                 )
                 listener?.onAppointmentAdded(appointment)
-                Toast.makeText(requireContext(), "Appointment added successfully", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    requireContext(),
+                    "Appointment added successfully",
+                    Toast.LENGTH_SHORT
+                ).show()
+                addEventToCalendarAutomatically(
+                    title = "Service - ${selectedCustomer!!.fullname}",
+                    startDate = selectedDate!!,
+                    address = selectedCustomer!!.address ?: "No address provided"
+                )
                 dismiss()
             }
             .addOnFailureListener {
-                Toast.makeText(requireContext(), "Error saving appointment", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Error saving appointment", Toast.LENGTH_SHORT)
+                    .show()
             }
+    }
+
+    private fun addEventToCalendarAutomatically(title: String, startDate: Date, address: String) {
+        if (!checkCalendarPermissions()) return
+
+        val cr = requireContext().contentResolver
+
+        try {
+            // Obtener ID de calendario del usuario
+            val calendarsCursor = cr.query(
+                CalendarContract.Calendars.CONTENT_URI,
+                arrayOf(CalendarContract.Calendars._ID),
+                "${CalendarContract.Calendars.VISIBLE} = 1 AND ${CalendarContract.Calendars.IS_PRIMARY} = 1",
+                null,
+                null
+            )
+
+            var calendarId: Long? = null
+            calendarsCursor?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    calendarId = cursor.getLong(0)
+                }
+            }
+
+            if (calendarId == null) {
+                Toast.makeText(requireContext(), "No calendar found", Toast.LENGTH_SHORT).show()
+                return
+            }
+
+            val endDate = Date(startDate.time + 60 * 60 * 1000) // 1 hour later
+
+            val values = ContentValues().apply {
+                put(CalendarContract.Events.DTSTART, startDate.time)
+                put(CalendarContract.Events.DTEND, endDate.time)
+                put(CalendarContract.Events.TITLE, title)
+                put(CalendarContract.Events.DESCRIPTION, "Created from WorkAdministration app")
+                put(CalendarContract.Events.CALENDAR_ID, calendarId)
+                put(CalendarContract.Events.EVENT_TIMEZONE, TimeZone.getDefault().id)
+                put(CalendarContract.Events.EVENT_LOCATION, address)
+            }
+
+            val uri: Uri? = cr.insert(CalendarContract.Events.CONTENT_URI, values)
+
+            if (uri != null) {
+                Toast.makeText(requireContext(), "Event added to calendar", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(requireContext(), "Failed to add event", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: SecurityException) {
+            e.printStackTrace()
+            Toast.makeText(requireContext(), "No permission to access calendar", Toast.LENGTH_SHORT).show()
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(requireContext(), "Error adding event: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
     }
 
     override fun getTheme(): Int = R.style.CustomBottomSheetDialogTheme
