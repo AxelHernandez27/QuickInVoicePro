@@ -3,6 +3,6 @@
     <item
         android:id="@+id/action_logout"
         android:title="Log out"
-        android:icon="@android:drawable/ic_logout"
+        android:icon="@android:drawable/ic_lock_power_off"
         android:iconTint="#D50000" />
 </menu>
