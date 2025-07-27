@@ -60,11 +60,12 @@ class AppointmentAdapter(
         val citaSinHora = clearTime(cita.date)        // Fecha de la cita sin hora
 
         val diffInMillis = citaSinHora.time - hoySinHora.time
-        val diffInDaysDouble = diffInMillis.toDouble() / (1000 * 60 * 60 * 24)
-        val diffInDays = Math.ceil(diffInDaysDouble).toInt()
+        val diffInDaysRaw  = (diffInMillis / (1000 * 60 * 60 * 24)).toInt()
+        // Si la cita es hoy o en el futuro, sumamos 1 para que hoy sea día 1
+        val diffInDays = if (diffInDaysRaw >= 0) diffInDaysRaw + 1 else diffInDaysRaw
 
         when {
-            diffInDays in 0..3 -> {
+            diffInDays in 1..3 -> {
                 cardView.setCardBackgroundColor(ContextCompat.getColor(context, R.color.red))
             }
             diffInDays in 4..7 -> {
