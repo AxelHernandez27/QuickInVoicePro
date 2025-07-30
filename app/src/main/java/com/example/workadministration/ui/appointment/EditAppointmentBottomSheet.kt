@@ -4,16 +4,24 @@ import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
+import androidx.lifecycle.lifecycleScope
 import com.example.workadministration.R
 import com.example.workadministration.ui.customer.Customer
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -38,6 +46,7 @@ class EditAppointmentBottomSheet : BottomSheetDialogFragment() {
     private var allCustomers = listOf<Customer>()
     private var selectedCustomer: Customer? = null
     private var appointmentDate: Date? = null
+    private var eventId: String? = null
 
     private var appointmentId: String? = null
     private var currentPhone: String? = null
@@ -129,6 +138,7 @@ class EditAppointmentBottomSheet : BottomSheetDialogFragment() {
             db.collection("appointments").document(id).get().addOnSuccessListener { doc ->
                 val customerName = doc.getString("customerName") ?: ""
                 val phone = doc.getString("customerPhone") ?: ""
+                val event = doc.getString("eventId")
                 currentPhone = phone // Guardamos el teléfono actual
 
                 autoCompleteClient.setText(customerName)
@@ -194,33 +204,133 @@ class EditAppointmentBottomSheet : BottomSheetDialogFragment() {
             return
         }
 
+        val context = requireContext()
+        val sharedPref = context.getSharedPreferences("my_prefs", Context.MODE_PRIVATE)
+        val accessToken = sharedPref.getString("ACCESS_TOKEN", null)
+
+        if (accessToken.isNullOrEmpty()) {
+            Toast.makeText(context, "No valid Google token available", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (accessToken.isNullOrEmpty()) {
+            Toast.makeText(context, "No valid Google token available", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val updatedPhone = selectedCustomer!!.phone.ifEmpty { currentPhone ?: "" }
         val appointmentData = mapOf(
             "customerId" to selectedCustomer!!.id,
             "customerName" to selectedCustomer!!.fullname,
-            "customerPhone" to selectedCustomer!!.phone.ifEmpty { currentPhone ?: "" },
-            "date" to Timestamp(appointmentDate!!)
+            "customerPhone" to updatedPhone,
+            "date" to Timestamp(appointmentDate!!),
+            "eventId" to eventId
         )
 
         appointmentId?.let { id ->
             db.collection("appointments").document(id)
-                .set(appointmentData, SetOptions.merge())
-                .addOnSuccessListener {
-                    Toast.makeText(requireContext(), "Appointment updated successfully", Toast.LENGTH_SHORT).show()
+                .get()
+                .addOnSuccessListener { doc ->
+                    val eventId = doc.getString("eventId") // Asegúrate de que guardas esto al crear la cita
 
-                    val updatedAppointment = Appointment(
-                        id = id,
-                        customerId = selectedCustomer!!.id,
-                        customerName = selectedCustomer!!.fullname,
-                        customerPhone = selectedCustomer!!.phone.ifEmpty { currentPhone ?: "" },
-                        date = appointmentDate!!,
-                        status = "pendiente"
-                    )
-                    listener?.onAppointmentUpdated(updatedAppointment)
-                    dismiss()
+                    db.collection("appointments").document(id)
+                        .set(appointmentData, SetOptions.merge())
+                        .addOnSuccessListener {
+                            Toast.makeText(context, "Appointment updated successfully", Toast.LENGTH_SHORT).show()
+
+                            val updatedAppointment = Appointment(
+                                id = id,
+                                customerId = selectedCustomer!!.id,
+                                customerName = selectedCustomer!!.fullname,
+                                customerPhone = updatedPhone,
+                                date = appointmentDate!!,
+                                eventId = eventId
+                            )
+                            listener?.onAppointmentUpdated(updatedAppointment)
+
+                            if (!eventId.isNullOrEmpty()) {
+                                // Solo si hay un eventId válido en Firestore, lo actualizamos
+                                val title = "Service - ${selectedCustomer!!.fullname}"
+                                val address = selectedCustomer!!.address
+
+                                // Llama a la función suspend desde una corrutina
+                                lifecycleScope.launch {
+                                    val success = updateEventOnGoogleCalendar(accessToken, eventId, title, appointmentDate!!, address)
+                                    if (success) {
+                                        Toast.makeText(context, "Google Calendar event updated", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, "Failed to update Google Calendar event", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+
+                            dismiss()
+                        }
+                        .addOnFailureListener {
+                            Toast.makeText(context, "Error updating appointment", Toast.LENGTH_SHORT).show()
+                        }
                 }
-                .addOnFailureListener {
-                    Toast.makeText(requireContext(), "Error updating appointment", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+
+    private suspend fun updateEventOnGoogleCalendar(
+        accessToken: String,
+        eventId: String,
+        title: String,
+        startDate: Date,
+        address: String
+    ): Boolean {
+        return withContext(Dispatchers.IO) {
+            val endDate = Date(startDate.time + 60 * 60 * 1000)
+            val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX", Locale.getDefault())
+            isoFormat.timeZone = TimeZone.getTimeZone("UTC")
+
+            val json = JSONObject().apply {
+                put("summary", title)
+                put("description", "Updated from Invozo app")
+                put("start", JSONObject().apply {
+                    put("dateTime", isoFormat.format(startDate))
+                    put("timeZone", "UTC")
+                })
+                put("end", JSONObject().apply {
+                    put("dateTime", isoFormat.format(endDate))
+                    put("timeZone", "UTC")
+                })
+                put("location", address.replace("\n", " ").trim())
+            }.toString()
+
+            Log.d("CalendarAPI", "JSON payload: $json")
+
+
+            try {
+                val url = URL("https://www.googleapis.com/calendar/v3/calendars/primary/events/$eventId")
+                val connection = (url.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "PATCH"
+                    doOutput = true
+                    setRequestProperty("Authorization", "Bearer $accessToken")
+                    setRequestProperty("Content-Type", "application/json")
                 }
+
+                connection.outputStream.use { it.write(json.toByteArray(Charsets.UTF_8)) }
+
+                val responseCode = connection.responseCode
+                val responseText = if (responseCode in 200..299) {
+                    connection.inputStream.bufferedReader().use { it.readText() }
+                } else {
+                    connection.errorStream?.bufferedReader()?.use { it.readText() } ?: "Unknown error"
+                }
+
+                Log.d("CalendarAPI", "Update Response code: $responseCode, body: $responseText")
+
+                responseCode in 200..299
+            } catch (e: Exception) {
+                e.printStackTrace()
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(requireContext(), "Error updating event: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+                false
+            }
         }
     }
 
