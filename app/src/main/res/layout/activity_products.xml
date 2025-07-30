@@ -41,7 +41,8 @@
             android:src="@drawable/add"
             android:contentDescription="Agregar productos"
             android:scaleType="centerInside"
-            android:elevation="4dp" />
+            android:elevation="4dp"
+            app:tint="@android:color/white" />
 
         <!-- Search Field -->
         <EditText

@@ -42,7 +42,8 @@
             android:src="@drawable/add"
             android:contentDescription="Agregar Quote"
             android:scaleType="centerInside"
-            android:elevation="4dp"/>
+            android:elevation="4dp"
+            app:tint="@android:color/white" />
 
         <!-- Buscador de quotes -->
         <EditText

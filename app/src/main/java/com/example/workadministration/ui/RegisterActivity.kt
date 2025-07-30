@@ -80,10 +80,11 @@ class RegisterActivity : AppCompatActivity() {
 
         // Configuración de Google Sign-In con permiso para Calendar
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-            .requestIdToken(getString(R.string.default_web_client_id)) // este ID viene de google-services.json
             .requestEmail()
-            .requestScopes(Scope("https://www.googleapis.com/auth/calendar")) // Solicita acceso al calendario
+            .requestServerAuthCode(getString(R.string.default_web_client_id), false)
+            .requestScopes(Scope("https://www.googleapis.com/auth/calendar"))
             .build()
+
 
         googleSignInClient = GoogleSignIn.getClient(this, gso)
 
@@ -101,7 +102,15 @@ class RegisterActivity : AppCompatActivity() {
             try {
                 val account = task.getResult(ApiException::class.java)
                 if (account != null) {
-                    firebaseAuthWithGoogle(account)
+                    // Aquí obtenemos el serverAuthCode
+                    val serverAuthCode = account.serverAuthCode
+                    if (serverAuthCode != null) {
+                        // Aquí llamas a un backend para intercambiar el código por tokens
+                        // O puedes guardarlo y usar GoogleAuthUtil.getToken para obtener token (menos recomendable)
+                        firebaseAuthWithGoogle(account)
+                    } else {
+                        Toast.makeText(this, "No server auth code received", Toast.LENGTH_SHORT).show()
+                    }
                 } else {
                     Toast.makeText(this, "Error obtaining Google account", Toast.LENGTH_SHORT).show()
                 }
@@ -110,6 +119,7 @@ class RegisterActivity : AppCompatActivity() {
             }
         }
     }
+
 
     private fun firebaseAuthWithGoogle(account: GoogleSignInAccount) {
         val credential = GoogleAuthProvider.getCredential(account.idToken, null)

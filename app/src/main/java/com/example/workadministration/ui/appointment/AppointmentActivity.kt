@@ -2,19 +2,33 @@ package com.example.workadministration.ui.appointment
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.os.StrictMode
 import android.text.Editable
 import android.text.TextWatcher
+import android.util.Log
+import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.workadministration.HomeActivity
 import com.example.workadministration.R
 import com.example.workadministration.ui.NavigationUtil
+import com.google.android.gms.auth.GoogleAuthException
+import com.google.android.gms.auth.GoogleAuthUtil
+import com.google.android.gms.auth.UserRecoverableAuthException
+import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.IOException
 
 class AppointmentActivity : AppCompatActivity(),
     AddAppointmentBottomSheet.OnAppointmentAddedListener,
@@ -26,15 +40,26 @@ class AppointmentActivity : AppCompatActivity(),
     private val appointmentsList = mutableListOf<Appointment>()
     private val db = FirebaseFirestore.getInstance()
 
+    private var accessToken: String? = null
+
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_appointment)
 
+        // Obtener el token que viene por Intent
+        accessToken = intent.getStringExtra("ACCESS_TOKEN")
+        Log.d("AppointmentActivity", "Token recibido: $accessToken")
+
         val addButton = findViewById<ImageButton>(R.id.btnAgregarCita)
         addButton.setOnClickListener {
             val bottomSheet = AddAppointmentBottomSheet()
+            bottomSheet.setOnAppointmentAddedListener(this@AppointmentActivity)
             bottomSheet.show(supportFragmentManager, "AddAppointmentBottomSheet")
+            if (accessToken == null) {
+                Toast.makeText(this, "Warning: No access token received", Toast.LENGTH_SHORT).show()
+                // Aquí puedes decidir qué hacer si no hay token: bloquear función, etc.
+            }
         }
 
         recyclerAppointments = findViewById(R.id.citasRecyclerView)

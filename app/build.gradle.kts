@@ -106,4 +106,11 @@ dependencies {
     implementation("com.google.api-client:google-api-client-android:1.35.0")
     implementation("com.google.oauth-client:google-oauth-client-jetty:1.34.1")
 
+    // ---------- RETROFIT   ----------
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.1")
+
+
+
 }
