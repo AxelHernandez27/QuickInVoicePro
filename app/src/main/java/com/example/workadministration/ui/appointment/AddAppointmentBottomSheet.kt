@@ -107,6 +107,26 @@ class AddAppointmentBottomSheet : BottomSheetDialogFragment() {
                     selectedCustomer = allCustomers.find { it.fullname == name }
                     autoCompleteClient.error = null
                 }
+                autoCompleteClient.setOnTouchListener { v, _ ->
+                    v.post {
+                        val location = IntArray(2)
+                        v.getLocationOnScreen(location)
+                        val screenHeight = v.resources.displayMetrics.heightPixels
+                        val spaceBelow = screenHeight - location[1] - v.height
+                        val dropDownHeight = 300 // Puedes ajustar este valor a lo que necesites
+
+                        // Si no hay suficiente espacio abajo, lo forzamos hacia arriba
+                        if (spaceBelow < dropDownHeight) {
+                            autoCompleteClient.dropDownVerticalOffset = -dropDownHeight
+                        } else {
+                            autoCompleteClient.dropDownVerticalOffset = 0
+                        }
+
+                        autoCompleteClient.showDropDown()
+                    }
+                    false
+                }
+
             }
     }
 
