@@ -11,6 +11,7 @@ import android.view.ViewGroup
 import android.widget.*
 import androidx.lifecycle.lifecycleScope
 import com.example.workadministration.R
+import com.example.workadministration.TokenHelper
 import com.example.workadministration.ui.customer.Customer
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.firebase.Timestamp
@@ -205,72 +206,74 @@ class EditAppointmentBottomSheet : BottomSheetDialogFragment() {
         }
 
         val context = requireContext()
-        val sharedPref = context.getSharedPreferences("my_prefs", Context.MODE_PRIVATE)
-        val accessToken = sharedPref.getString("ACCESS_TOKEN", null)
+        //val sharedPref = context.getSharedPreferences("my_prefs", Context.MODE_PRIVATE)
+        lifecycleScope.launch {
+            val accessToken = TokenHelper.refreshGoogleToken(requireContext())
 
-        if (accessToken.isNullOrEmpty()) {
-            Toast.makeText(context, "No valid Google token available", Toast.LENGTH_SHORT).show()
-            return
-        }
+            if (accessToken.isNullOrEmpty()) {
+                Toast.makeText(context, "No valid Google token available", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
 
-        if (accessToken.isNullOrEmpty()) {
-            Toast.makeText(context, "No valid Google token available", Toast.LENGTH_SHORT).show()
-            return
-        }
+            val updatedPhone = selectedCustomer!!.phone.ifEmpty { currentPhone ?: "" }
+            val appointmentData = mapOf(
+                "customerId" to selectedCustomer!!.id,
+                "customerName" to selectedCustomer!!.fullname,
+                "customerPhone" to updatedPhone,
+                "date" to Timestamp(appointmentDate!!),
+                "eventId" to eventId
+            )
 
-        val updatedPhone = selectedCustomer!!.phone.ifEmpty { currentPhone ?: "" }
-        val appointmentData = mapOf(
-            "customerId" to selectedCustomer!!.id,
-            "customerName" to selectedCustomer!!.fullname,
-            "customerPhone" to updatedPhone,
-            "date" to Timestamp(appointmentDate!!),
-            "eventId" to eventId
-        )
+            appointmentId?.let { id ->
+                db.collection("appointments").document(id)
+                    .get()
+                    .addOnSuccessListener { doc ->
+                        val eventId = doc.getString("eventId")
 
-        appointmentId?.let { id ->
-            db.collection("appointments").document(id)
-                .get()
-                .addOnSuccessListener { doc ->
-                    val eventId = doc.getString("eventId") // Asegúrate de que guardas esto al crear la cita
+                        db.collection("appointments").document(id)
+                            .set(appointmentData, SetOptions.merge())
+                            .addOnSuccessListener {
+                                Toast.makeText(context, "Appointment updated successfully", Toast.LENGTH_SHORT).show()
 
-                    db.collection("appointments").document(id)
-                        .set(appointmentData, SetOptions.merge())
-                        .addOnSuccessListener {
-                            Toast.makeText(context, "Appointment updated successfully", Toast.LENGTH_SHORT).show()
+                                val updatedAppointment = Appointment(
+                                    id = id,
+                                    customerId = selectedCustomer!!.id,
+                                    customerName = selectedCustomer!!.fullname,
+                                    customerPhone = updatedPhone,
+                                    date = appointmentDate!!,
+                                    eventId = eventId
+                                )
+                                listener?.onAppointmentUpdated(updatedAppointment)
 
-                            val updatedAppointment = Appointment(
-                                id = id,
-                                customerId = selectedCustomer!!.id,
-                                customerName = selectedCustomer!!.fullname,
-                                customerPhone = updatedPhone,
-                                date = appointmentDate!!,
-                                eventId = eventId
-                            )
-                            listener?.onAppointmentUpdated(updatedAppointment)
+                                if (!eventId.isNullOrEmpty()) {
+                                    val title = "Service - ${selectedCustomer!!.fullname}"
+                                    val address = selectedCustomer!!.address
 
-                            if (!eventId.isNullOrEmpty()) {
-                                // Solo si hay un eventId válido en Firestore, lo actualizamos
-                                val title = "Service - ${selectedCustomer!!.fullname}"
-                                val address = selectedCustomer!!.address
-
-                                // Llama a la función suspend desde una corrutina
-                                lifecycleScope.launch {
-                                    val success = updateEventOnGoogleCalendar(accessToken, eventId, title, appointmentDate!!, address)
-                                    if (success) {
-                                        Toast.makeText(context, "Google Calendar event updated", Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        Toast.makeText(context, "Failed to update Google Calendar event", Toast.LENGTH_SHORT).show()
+                                    lifecycleScope.launch {
+                                        val success = updateEventOnGoogleCalendar(
+                                            accessToken,
+                                            eventId,
+                                            title,
+                                            appointmentDate!!,
+                                            address
+                                        )
+                                        if (success) {
+                                            Toast.makeText(context, "Google Calendar event updated", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(context, "Failed to update Google Calendar event", Toast.LENGTH_SHORT).show()
+                                        }
                                     }
                                 }
-                            }
 
-                            dismiss()
-                        }
-                        .addOnFailureListener {
-                            Toast.makeText(context, "Error updating appointment", Toast.LENGTH_SHORT).show()
-                        }
-                }
+                                dismiss()
+                            }
+                            .addOnFailureListener {
+                                Toast.makeText(context, "Error updating appointment", Toast.LENGTH_SHORT).show()
+                            }
+                    }
+            }
         }
+
     }
 
 

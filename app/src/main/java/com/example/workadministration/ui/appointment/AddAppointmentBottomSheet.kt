@@ -13,6 +13,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.workadministration.R
+import com.example.workadministration.TokenHelper
 import com.example.workadministration.ui.customer.Customer
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.firebase.Timestamp
@@ -177,21 +178,29 @@ class AddAppointmentBottomSheet : BottomSheetDialogFragment() {
         val title = "Service - ${selectedCustomer!!.fullname}"
         val address = selectedCustomer!!.address?.replace("\n", " ")?.trim() ?: "No address provided"
 
-        val accessToken = requireContext()
-            .getSharedPreferences("my_prefs", android.content.Context.MODE_PRIVATE)
-            .getString("ACCESS_TOKEN", null)
+        lifecycleScope.launch {
+            val freshToken = TokenHelper.refreshGoogleToken(requireContext())
+            if (freshToken == null) {
+                Toast.makeText(requireContext(), "No se pudo obtener token actualizado", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
 
-        Log.d("Add Appointment", "Token: $accessToken")
+            val eventId = withContext(Dispatchers.IO) {
+                addEventToGoogleCalendar(freshToken, title, selectedDate!!, address)
+            }
+
+
+            Log.d("Add Appointment", "Token: $accessToken")
 
         btnSave.isEnabled = false
 
-        lifecycleScope.launch {
+        /*lifecycleScope.launch {
             val eventId = if (accessToken != null) {
                 withContext(Dispatchers.IO) {
                     Log.d("Callieng add", "Token: $accessToken")
                     addEventToGoogleCalendar(accessToken, title, selectedDate!!, address)
                 }
-            } else null
+            } else null*/
 
             val appointmentData = hashMapOf(
                 "customerId" to selectedCustomer!!.id,
