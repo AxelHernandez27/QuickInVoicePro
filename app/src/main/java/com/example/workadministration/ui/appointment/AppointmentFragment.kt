@@ -55,6 +55,7 @@ class AppointmentFragment : Fragment(),
         }
 
         getAppointments()
+        eliminarCitasVencidas()
 
         searchAppointment.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(s: Editable?) {
