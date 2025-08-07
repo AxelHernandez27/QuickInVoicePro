@@ -18,6 +18,7 @@ import com.example.workadministration.R
 import com.google.firebase.firestore.FirebaseFirestore
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.Date
 
 class AppointmentFragment : Fragment(),
     AddAppointmentBottomSheet.OnAppointmentAddedListener,
@@ -152,6 +153,62 @@ class AppointmentFragment : Fragment(),
             .show()
     }
 
+    private fun eliminarCitasVencidas() {
+        val now = Date()
+        db.collection("appointments")
+            .get()
+            .addOnSuccessListener { documents ->
+                for (document in documents) {
+                    val appointment = document.toObject(Appointment::class.java).copy(id = document.id)
+                    if (appointment.date.before(now)) {
+                        val prefs = requireContext().getSharedPreferences("my_prefs", AppCompatActivity.MODE_PRIVATE)
+                        val accessToken = prefs.getString("ACCESS_TOKEN", null)
+
+                        if (appointment.eventId != null && accessToken != null) {
+                            // Eliminar del calendario en hilo aparte
+                            Thread {
+                                try {
+                                    val url = URL("https://www.googleapis.com/calendar/v3/calendars/primary/events/${appointment.eventId}")
+                                    val connection = url.openConnection() as HttpURLConnection
+                                    connection.requestMethod = "DELETE"
+                                    connection.setRequestProperty("Authorization", "Bearer $accessToken")
+                                    connection.connectTimeout = 5000
+                                    connection.readTimeout = 5000
+
+                                    val responseCode = connection.responseCode
+                                    connection.disconnect()
+
+                                    if (responseCode == 204) {
+                                        eliminarDeFirestore(appointment)
+                                    }
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
+                            }.start()
+                        } else {
+                            eliminarDeFirestore(appointment)
+                        }
+                    }
+                }
+            }
+    }
+
+    private fun eliminarDeFirestore(appointment: Appointment) {
+        db.collection("appointments").document(appointment.id)
+            .delete()
+            .addOnSuccessListener {
+                requireActivity().runOnUiThread {
+                    appointmentsList.remove(appointment)
+                    adapter.actualizarLista(appointmentsList)
+                }
+            }
+            .addOnFailureListener {
+                requireActivity().runOnUiThread {
+                    Toast.makeText(requireContext(), "Error auto-eliminando cita", Toast.LENGTH_SHORT).show()
+                }
+            }
+    }
+
     override fun onAppointmentAdded(appointment: Appointment) {
         appointmentsList.add(appointment)
         adapter.actualizarLista(appointmentsList.toList())
@@ -163,6 +220,7 @@ class AppointmentFragment : Fragment(),
             .addOnSuccessListener {
                 Toast.makeText(requireContext(), "Appointment updated successfully", Toast.LENGTH_SHORT).show()
                 getAppointments()
+                eliminarCitasVencidas()
             }
             .addOnFailureListener {
                 Toast.makeText(requireContext(), "Error updating appointment", Toast.LENGTH_SHORT).show()
