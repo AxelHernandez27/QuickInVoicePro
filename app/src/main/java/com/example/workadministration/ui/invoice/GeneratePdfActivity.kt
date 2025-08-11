@@ -7,6 +7,9 @@ import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
+import android.text.Layout
+import android.text.StaticLayout
+import android.text.TextPaint
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
@@ -78,11 +81,38 @@ class GeneratePdfActivity : AppCompatActivity() {
             }
     }
 
+    @Suppress("DEPRECATION")
+    private fun createStaticLayout(text: String, paint: TextPaint, width: Int): StaticLayout {
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            StaticLayout.Builder.obtain(text, 0, text.length, paint, width)
+                .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                .setLineSpacing(0f, 1f)
+                .setIncludePad(false)
+                .build()
+        } else {
+            StaticLayout(text, paint, width, Layout.Alignment.ALIGN_NORMAL, 1f, 0f, false)
+        }
+    }
+
     private fun generatePDF(customerName: String, customerAddress: String, customerPhone: String, customerEmail: String, date: Date, total: Double, notes: String, extra: Double, products: List<Triple<String, Double, Int>>) {
 
         val pdfDocument = PdfDocument()
         val pageWidth = 400
         val pageHeight = 750 + (products.size * 35)
+        val notesWidth = 300 // ancho para forzar wrap
+        val notesText = notes.ifEmpty {
+            "No notes."
+        }
+
+        val notesTextPaint = TextPaint().apply {
+            isAntiAlias = true
+            color = Color.BLACK
+            textSize = 12f // tamaño de texto visible
+            typeface = Typeface.DEFAULT
+        }
+
+        val staticLayoutNotes = createStaticLayout(notesText, notesTextPaint, notesWidth)
+        val notesHeight = staticLayoutNotes.height
         val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create()
         val page = pdfDocument.startPage(pageInfo)
         val canvas = page.canvas
@@ -199,15 +229,23 @@ class GeneratePdfActivity : AppCompatActivity() {
 
         yPosition += 40f
 
+        // Notas con salto de línea dentro de un marco ajustado y sin borde visible
         paint.textAlign = Paint.Align.LEFT
         paint.typeface = Typeface.DEFAULT_BOLD
-        paint.textSize = 10f
+        paint.textSize = 12f
+        paint.color = Color.BLACK
         canvas.drawText("Notes:", 25f, yPosition, paint)
         yPosition += 15f
-        paint.typeface = Typeface.DEFAULT
-        canvas.drawText(notes, 25f, yPosition, paint)
 
-        yPosition += 60f
+        paint.style = Paint.Style.FILL
+        paint.color = Color.BLACK
+
+        canvas.save()
+        canvas.translate(25f, yPosition)
+        staticLayoutNotes.draw(canvas)
+        canvas.restore()
+
+        yPosition += notesHeight + 20f
 
         pdfDocument.finishPage(page)
 

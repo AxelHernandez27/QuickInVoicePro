@@ -4,9 +4,11 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.graphics.*
 import android.graphics.pdf.PdfDocument
-import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
+import android.text.Layout
+import android.text.StaticLayout
+import android.text.TextPaint
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.FileProvider
@@ -78,36 +80,78 @@ class GeneratePdfActivity : AppCompatActivity() {
             }
     }
 
-    private fun generatePDF(customerName: String, customerAddress: String, customerPhone: String, customerEmail: String, date: Date, total: Double, notes: String, extra: Double, products: List<Triple<String, Double, Int>>) {
+    @Suppress("DEPRECATION")
+    private fun createStaticLayout(text: String, paint: TextPaint, width: Int): StaticLayout {
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            StaticLayout.Builder.obtain(text, 0, text.length, paint, width)
+                .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                .setLineSpacing(0f, 1f)
+                .setIncludePad(false)
+                .build()
+        } else {
+            StaticLayout(text, paint, width, Layout.Alignment.ALIGN_NORMAL, 1f, 0f, false)
+        }
+    }
+
+    private fun generatePDF(
+        customerName: String,
+        customerAddress: String,
+        customerPhone: String,
+        customerEmail: String,
+        date: Date,
+        total: Double,
+        notes: String,
+        extra: Double,
+        products: List<Triple<String, Double, Int>>
+    ) {
+        val pageWidth = 400
+        val notesWidth = 300 // ancho para forzar wrap
+        val notesText = notes.ifEmpty {
+            "No notes."
+        }
+
+        val notesTextPaint = TextPaint().apply {
+            isAntiAlias = true
+            color = Color.BLACK
+            textSize = 12f // tamaño de texto visible
+            typeface = Typeface.DEFAULT
+        }
+
+        val staticLayoutNotes = createStaticLayout(notesText, notesTextPaint, notesWidth)
+        val notesHeight = staticLayoutNotes.height
+
+        val pageHeight = 750 + (products.size * 35) + notesHeight + 60
 
         val pdfDocument = PdfDocument()
-        val pageWidth = 400
-        val pageHeight = 750 + (products.size * 35)
         val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create()
         val page = pdfDocument.startPage(pageInfo)
         val canvas = page.canvas
         val paint = Paint()
 
+        // Marca de agua
         val logo = BitmapFactory.decodeResource(resources, R.drawable.logo1)
         val scaledWatermark = Bitmap.createScaledBitmap(logo, 300, 300, false)
-
         val watermarkPaint = Paint()
         watermarkPaint.alpha = 30
-
         val watermarkX = (pageWidth - scaledWatermark.width) / 2f
         val watermarkY = (pageHeight - scaledWatermark.height) / 2f
-
         canvas.drawBitmap(scaledWatermark, watermarkX, watermarkY, watermarkPaint)
+
         var yPosition = 40f
 
+        // Título
         paint.textAlign = Paint.Align.CENTER
         paint.typeface = Typeface.create(Typeface.DEFAULT_BOLD, Typeface.BOLD_ITALIC)
         paint.textSize = 22f
+        paint.color = Color.BLACK
         canvas.drawText("Quote Service", pageWidth / 2f, yPosition, paint)
+
         paint.color = Color.parseColor("#8AB6B6")
         canvas.drawLine(50f, yPosition + 5f, pageWidth - 50f, yPosition + 5f, paint)
 
         yPosition += 40f
+
+        // Fecha
         paint.color = Color.BLACK
         paint.textAlign = Paint.Align.CENTER
         paint.textSize = 12f
@@ -118,13 +162,13 @@ class GeneratePdfActivity : AppCompatActivity() {
         val formatter = SimpleDateFormat("MMMM dd, yyyy HH:mm", Locale.ENGLISH)
         formatter.timeZone = TimeZone.getTimeZone("America/Mexico_City")
         val formattedDate = formatter.format(date)
-
         paint.typeface = Typeface.DEFAULT
         canvas.drawText(formattedDate, pageWidth / 2f, yPosition, paint)
 
         yPosition += 25f
 
-        val billToX = (pageWidth / 2f) - 15f  // Centramos el bloque en el medio aprox
+        // Datos cliente
+        val billToX = (pageWidth / 2f) - 15f
         val boxHeight = 20f
         paint.color = Color.parseColor("#8AB6B6")
         canvas.drawRect(billToX - 10f, yPosition, pageWidth - 20f, yPosition + boxHeight, paint)
@@ -137,10 +181,9 @@ class GeneratePdfActivity : AppCompatActivity() {
         canvas.drawText("BILL TO:", billToX, yPosition, paint)
 
         yPosition += 15f
-        canvas.drawText(customerName, billToX, yPosition, paint)
-
-        yPosition += 15f
         paint.typeface = Typeface.DEFAULT
+        canvas.drawText(customerName, billToX, yPosition, paint)
+        yPosition += 15f
         canvas.drawText(customerAddress, billToX, yPosition, paint)
         yPosition += 15f
         canvas.drawText(customerPhone, billToX, yPosition, paint)
@@ -149,6 +192,7 @@ class GeneratePdfActivity : AppCompatActivity() {
 
         yPosition += 30f
 
+        // Encabezado productos
         paint.color = Color.parseColor("#8AB6B6")
         canvas.drawRect(20f, yPosition, pageWidth - 20f, yPosition + 20f, paint)
 
@@ -163,6 +207,7 @@ class GeneratePdfActivity : AppCompatActivity() {
         canvas.drawText("Amount", pageWidth - 25f, yPosition + 15f, paint)
         yPosition += 35f
 
+        // Productos
         products.forEachIndexed { index, (desc, price, quantity) ->
             if (index % 2 == 1) {
                 paint.color = Color.argb(30, 0, 0, 0)
@@ -179,6 +224,7 @@ class GeneratePdfActivity : AppCompatActivity() {
             yPosition += 20f
         }
 
+        // Totales
         listOf(
             "Total Payment" to (total - extra),
             "Extra Charges" to extra,
@@ -199,15 +245,23 @@ class GeneratePdfActivity : AppCompatActivity() {
 
         yPosition += 40f
 
+        // Notas con salto de línea dentro de un marco ajustado y sin borde visible
         paint.textAlign = Paint.Align.LEFT
         paint.typeface = Typeface.DEFAULT_BOLD
-        paint.textSize = 10f
+        paint.textSize = 12f
+        paint.color = Color.BLACK
         canvas.drawText("Notes:", 25f, yPosition, paint)
         yPosition += 15f
-        paint.typeface = Typeface.DEFAULT
-        canvas.drawText(notes, 25f, yPosition, paint)
 
-        yPosition += 60f
+        paint.style = Paint.Style.FILL
+        paint.color = Color.BLACK
+
+        canvas.save()
+        canvas.translate(25f, yPosition)
+        staticLayoutNotes.draw(canvas)
+        canvas.restore()
+
+        yPosition += notesHeight + 20f
 
         pdfDocument.finishPage(page)
 
