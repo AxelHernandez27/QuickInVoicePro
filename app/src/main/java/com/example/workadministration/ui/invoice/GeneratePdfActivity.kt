@@ -59,6 +59,7 @@ class GeneratePdfActivity : AppCompatActivity() {
 
                             db.collection("invoices").document(invoiceId!!)
                                 .collection("invoiceDetails")
+                                .orderBy("position")
                                 .get()
                                 .addOnSuccessListener { details ->
                                     val products = details.map {

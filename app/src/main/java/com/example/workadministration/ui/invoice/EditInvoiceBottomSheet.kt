@@ -127,7 +127,7 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShe
                 etExtraCharges.setText(extraCharges.toString())
 
                 db.collection("invoices").document(id).collection("invoiceDetails")
-                    .get().addOnSuccessListener { details ->
+                    .orderBy("position").get().addOnSuccessListener { details ->
                         details.forEach { detailDoc ->
                             val product = Product(
                                 id = detailDoc.getString("productId") ?: "",

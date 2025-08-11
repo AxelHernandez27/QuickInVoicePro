@@ -18,6 +18,7 @@ import com.example.workadministration.R
 import com.google.firebase.firestore.FirebaseFirestore
 import java.net.HttpURLConnection
 import java.net.URL
+import java.util.Calendar
 import java.util.Date
 
 class AppointmentFragment : Fragment(),
@@ -161,7 +162,16 @@ class AppointmentFragment : Fragment(),
             .addOnSuccessListener { documents ->
                 for (document in documents) {
                     val appointment = document.toObject(Appointment::class.java).copy(id = document.id)
-                    if (appointment.date.before(now)) {
+
+                    // Crear una fecha límite = fecha de la cita + 1 día (24 horas)
+                    val calendar = Calendar.getInstance().apply {
+                        time = appointment.date
+                        add(Calendar.DAY_OF_YEAR, 1)
+                    }
+                    val fechaEliminacion = calendar.time
+
+                    // Eliminar si la fecha límite ya pasó
+                    if (fechaEliminacion.before(now)) {
                         val prefs = requireContext().getSharedPreferences("my_prefs", AppCompatActivity.MODE_PRIVATE)
                         val accessToken = prefs.getString("ACCESS_TOKEN", null)
 
@@ -193,6 +203,7 @@ class AppointmentFragment : Fragment(),
                 }
             }
     }
+
 
     private fun eliminarDeFirestore(appointment: Appointment) {
         db.collection("appointments").document(appointment.id)
