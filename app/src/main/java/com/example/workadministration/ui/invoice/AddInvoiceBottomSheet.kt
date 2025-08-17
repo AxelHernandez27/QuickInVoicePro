@@ -100,6 +100,8 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
             }
         )
         recyclerViewProducts.adapter = invoiceProductAdapter
+        (recyclerViewProducts.itemAnimator as? androidx.recyclerview.widget.SimpleItemAnimator)?.supportsChangeAnimations = false
+
 
         // Aquí agregamos ItemTouchHelper para drag & drop
         val itemTouchHelperCallback = object : ItemTouchHelper.Callback() {
@@ -112,6 +114,12 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
                 return makeMovementFlags(dragFlags, swipeFlags)
             }
 
+            override fun onSelectedChanged(viewHolder: RecyclerView.ViewHolder?, actionState: Int) {
+                if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
+                    viewHolder?.itemView?.clearFocus() // 👈 Quita foco de EditText
+                }
+                super.onSelectedChanged(viewHolder, actionState)
+            }
             override fun onMove(
                 recyclerView: RecyclerView,
                 viewHolder: RecyclerView.ViewHolder,
@@ -121,6 +129,11 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
                 val toPosition = target.adapterPosition
                 invoiceProductAdapter.moveItem(fromPosition, toPosition)
                 return true
+            }
+
+            override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
+                super.clearView(recyclerView, viewHolder)
+                recyclerView.adapter?.notifyDataSetChanged()
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
