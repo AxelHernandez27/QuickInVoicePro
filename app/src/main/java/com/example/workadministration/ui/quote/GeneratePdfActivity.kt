@@ -58,6 +58,7 @@ class GeneratePdfActivity : AppCompatActivity() {
 
                             db.collection("quotes").document(quoteId!!)
                                 .collection("quoteDetails")
+                                .orderBy("position")
                                 .get()
                                 .addOnSuccessListener { details ->
                                     val products = details.map {

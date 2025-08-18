@@ -16,5 +16,6 @@ class Quote (
         val productId: String = "",
         val name: String = "",
         val quantity: Number = 0,
-        val price: Double = 0.0
+        val price: Double = 0.0,
+        val position: Int = 0
     )

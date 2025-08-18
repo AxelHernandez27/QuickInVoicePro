@@ -157,16 +157,29 @@ class QuoteActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAdde
     }
 
     private fun deleteQuote(quote: Quote) {
-        db.collection("quotes").document(quote.id)
-            .delete()
-            .addOnSuccessListener {
+        val quoteRef = db.collection("quotes").document(quote.id)
+
+        // Primero eliminamos los detalles
+        quoteRef.collection("quoteDetails").get().addOnSuccessListener { detailsSnapshot ->
+            val batch = db.batch()
+            for (detailDoc in detailsSnapshot) {
+                batch.delete(detailDoc.reference)
+            }
+            // Eliminamos el quote principal
+            batch.delete(quoteRef)
+
+            batch.commit().addOnSuccessListener {
                 quoteList.remove(quote)
                 adapter.updateList(quoteList)
-            }
-            .addOnFailureListener { e ->
+                Toast.makeText(this, "Quote deleted successfully", Toast.LENGTH_SHORT).show()
+            }.addOnFailureListener { e ->
                 Toast.makeText(this, "Error deleting quote", Toast.LENGTH_SHORT).show()
             }
+        }.addOnFailureListener {
+            Toast.makeText(this, "Error deleting quote details", Toast.LENGTH_SHORT).show()
+        }
     }
+
 
     private fun confirmDelete(quote: Quote) {
         val alert = androidx.appcompat.app.AlertDialog.Builder(this)

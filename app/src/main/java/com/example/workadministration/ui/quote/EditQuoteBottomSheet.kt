@@ -9,6 +9,9 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.appcompat.app.AlertDialog
+import androidx.recyclerview.widget.ItemTouchHelper
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.example.workadministration.R
 import com.example.workadministration.ui.customer.AddCustomerBottomSheet
 import com.example.workadministration.ui.customer.Customer
@@ -25,15 +28,13 @@ class EditQuoteBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomSheet
     }
 
     private var listener: OnQuoteUpdatedListener? = null
-    private lateinit var customerAdapter: ArrayAdapter<String>
-
     fun setOnQuoteUpdatedListener(listener: OnQuoteUpdatedListener) {
         this.listener = listener
     }
 
     private lateinit var autoCompleteClient: AutoCompleteTextView
     private lateinit var autoCompleteProduct: AutoCompleteTextView
-    private lateinit var layoutProductsContainer: LinearLayout
+    private lateinit var recyclerViewProducts: RecyclerView
     private lateinit var tvSubtotalAmount: TextView
     private lateinit var tvTotalAmount: TextView
     private lateinit var etAdditionalNotes: EditText
@@ -45,12 +46,12 @@ class EditQuoteBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomSheet
     private val db = FirebaseFirestore.getInstance()
     private var allProducts = listOf<Product>()
     private var allCustomers = listOf<Customer>()
-    private val selectedProducts = mutableListOf<Product>()
+    private val selectedProducts = mutableListOf<Pair<Product, Int>>() // producto + cantidad
 
+    private lateinit var adapter: QuoteProductAdapter
     private var selectedCustomer: Customer? = null
     private var subtotal = 0.0
     private var extraCharges = 0.0
-
     private var quoteId: String? = null
 
     companion object {
@@ -68,9 +69,7 @@ class EditQuoteBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomSheet
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         quoteId = arguments?.getString(ARG_QUOTE_ID)
-        if (quoteId == null) {
-            dismiss()
-        }
+        if (quoteId == null) dismiss()
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -79,7 +78,7 @@ class EditQuoteBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomSheet
         autoCompleteClient = view.findViewById(R.id.autoCompleteClient)
         val btnAddClient = view.findViewById<Button>(R.id.btnAddClient)
         autoCompleteProduct = view.findViewById(R.id.autoCompleteProduct)
-        layoutProductsContainer = view.findViewById(R.id.layoutProductsContainer)
+        recyclerViewProducts = view.findViewById(R.id.recyclerViewProducts)
         tvSubtotalAmount = view.findViewById(R.id.tvSubtotalAmount)
         tvTotalAmount = view.findViewById(R.id.tvTotalAmount)
         etAdditionalNotes = view.findViewById(R.id.etAdditionalNotes)
@@ -108,12 +107,44 @@ class EditQuoteBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomSheet
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
 
+        setupRecyclerView()
+        btnAddCustomProduct.setOnClickListener { showAddCustomProductDialog() }
         btnSave.setOnClickListener { updateQuote() }
         btnCancel.setOnClickListener { dismiss() }
 
-        btnAddCustomProduct.setOnClickListener { showAddCustomProductDialog() }
-
         return view
+    }
+
+    private fun setupRecyclerView() {
+        adapter = QuoteProductAdapter(
+            selectedProducts,
+            onQuantityChanged = { _, _ -> updateTotal() },
+            onEditCustomProduct = { productId ->
+                val pair = selectedProducts.find { it.first.id == productId }
+                pair?.let { showEditCustomProductDialog(it.first) }
+            },
+            onDeleteProduct = { position ->
+                selectedProducts.removeAt(position)
+                adapter.notifyItemRemoved(position)
+                updateTotal()
+            }
+        )
+        recyclerViewProducts.layoutManager = LinearLayoutManager(requireContext())
+        recyclerViewProducts.adapter = adapter
+
+        val itemTouchHelperCallback = object : ItemTouchHelper.Callback() {
+            override fun getMovementFlags(rv: RecyclerView, vh: RecyclerView.ViewHolder) =
+                makeMovementFlags(ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0)
+
+            override fun onMove(rv: RecyclerView, vh: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
+                adapter.moveItem(vh.adapterPosition, target.adapterPosition)
+                return true
+            }
+
+            override fun onSwiped(vh: RecyclerView.ViewHolder, direction: Int) {}
+            override fun isLongPressDragEnabled() = true
+        }
+        ItemTouchHelper(itemTouchHelperCallback).attachToRecyclerView(recyclerViewProducts)
     }
 
     private fun loadQuoteData() {
@@ -128,7 +159,9 @@ class EditQuoteBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomSheet
                 etExtraCharges.setText(extraCharges.toString())
 
                 db.collection("quotes").document(id).collection("quoteDetails")
+                    .orderBy("position")
                     .get().addOnSuccessListener { details ->
+                        selectedProducts.clear()
                         details.forEach { detailDoc ->
                             val product = Product(
                                 id = detailDoc.getString("productId") ?: "",
@@ -136,11 +169,9 @@ class EditQuoteBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomSheet
                                 price = detailDoc.getDouble("price") ?: 0.0
                             )
                             val quantity = detailDoc.getLong("quantity")?.toInt() ?: 1
-
-                            val isCustom = product.id.isEmpty()
-                            selectedProducts.add(product)
-                            addProductView(product, quantity, isCustom)
+                            selectedProducts.add(product to quantity)
                         }
+                        adapter.notifyDataSetChanged()
                         updateTotal()
                     }
             }
@@ -149,47 +180,34 @@ class EditQuoteBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomSheet
 
     private fun loadClients(onComplete: () -> Unit) {
         db.collection("customers").get().addOnSuccessListener { documents ->
-            allCustomers = documents.map { doc ->
-                doc.toObject(Customer::class.java).copy(id = doc.id)
-            }
+            allCustomers = documents.map { doc -> doc.toObject(Customer::class.java).copy(id = doc.id) }
             val names = allCustomers.map { it.fullname }
-            customerAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, names)
-            autoCompleteClient.setAdapter(customerAdapter)
-
+            val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, names)
+            autoCompleteClient.setAdapter(adapter)
             autoCompleteClient.setOnItemClickListener { _, _, position, _ ->
-                val name = customerAdapter.getItem(position)
+                val name = adapter.getItem(position)
                 selectedCustomer = allCustomers.find { it.fullname == name }
             }
-
-            autoCompleteClient.setOnClickListener {
-                if (autoCompleteClient.adapter != null) autoCompleteClient.showDropDown()
-            }
-            autoCompleteClient.setOnFocusChangeListener { _, hasFocus ->
-                if (hasFocus) autoCompleteClient.showDropDown()
-            }
-
+            autoCompleteClient.setOnClickListener { if (autoCompleteClient.adapter != null) autoCompleteClient.showDropDown() }
+            autoCompleteClient.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) autoCompleteClient.showDropDown() }
             onComplete()
         }
     }
 
     override fun onCustomerAdded(customer: Customer) {
-        allCustomers = allCustomers + customer
-        customerAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, allCustomers.map { it.fullname })
-        autoCompleteClient.setAdapter(customerAdapter)
-
+        allCustomers += customer
+        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, allCustomers.map { it.fullname })
+        autoCompleteClient.setAdapter(adapter)
         selectedCustomer = customer
         autoCompleteClient.setText(customer.fullname, false)
         autoCompleteClient.error = null
         autoCompleteClient.clearFocus()
-
         Toast.makeText(requireContext(), "Selected customer: ${customer.fullname}", Toast.LENGTH_SHORT).show()
     }
 
     private fun loadProducts(onComplete: () -> Unit) {
         db.collection("products").get().addOnSuccessListener { documents ->
-            allProducts = documents.map { doc ->
-                doc.toObject(Product::class.java).copy(id = doc.id)
-            }
+            allProducts = documents.map { it.toObject(Product::class.java).copy(id = it.id) }
             val productNames = allProducts.map { it.name }
             val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, productNames)
             autoCompleteProduct.setAdapter(adapter)
@@ -198,22 +216,28 @@ class EditQuoteBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomSheet
                 val name = adapter.getItem(position)
                 val product = allProducts.find { it.name == name }
                 product?.let {
-                    selectedProducts.add(it)
-                    refreshProductListLayout()
-                    updateTotal()
+                    addOrUpdateProduct(it)
                     autoCompleteProduct.setText("")
                 }
             }
 
-            autoCompleteProduct.setOnClickListener {
-                if (autoCompleteProduct.adapter != null) autoCompleteProduct.showDropDown()
-            }
-            autoCompleteProduct.setOnFocusChangeListener { _, hasFocus ->
-                if (hasFocus) autoCompleteProduct.showDropDown()
-            }
-
+            autoCompleteProduct.setOnClickListener { if (autoCompleteProduct.adapter != null) autoCompleteProduct.showDropDown() }
+            autoCompleteProduct.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) autoCompleteProduct.showDropDown() }
             onComplete()
         }
+    }
+
+    private fun addOrUpdateProduct(product: Product) {
+        val index = selectedProducts.indexOfFirst { it.first.id == product.id }
+        if (index != -1) {
+            val current = selectedProducts[index]
+            selectedProducts[index] = current.first to current.second + 1
+            adapter.notifyItemChanged(index)
+        } else {
+            selectedProducts.add(product to 1)
+            adapter.notifyItemInserted(selectedProducts.size - 1)
+        }
+        updateTotal()
     }
 
     private fun showAddCustomProductDialog() {
@@ -229,9 +253,7 @@ class EditQuoteBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomSheet
                 val price = etPrice.text.toString().toDoubleOrNull() ?: 0.0
                 if (name.isNotEmpty() && price > 0.0) {
                     val product = Product("custom_${UUID.randomUUID()}", name, price)
-                    selectedProducts.add(product)
-                    refreshProductListLayout()
-                    updateTotal()
+                    addOrUpdateProduct(product)
                 } else {
                     Toast.makeText(requireContext(), "Invalid name or price", Toast.LENGTH_SHORT).show()
                 }
@@ -255,55 +277,22 @@ class EditQuoteBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomSheet
                 val name = etName.text.toString().trim()
                 val price = etPrice.text.toString().toDoubleOrNull() ?: 0.0
                 if (name.isNotEmpty() && price > 0.0) {
-                    product.name = name
-                    product.price = price
-                    refreshProductListLayout()
-                    updateTotal()
+                    val index = selectedProducts.indexOfFirst { it.first.id == product.id }
+                    if (index != -1) {
+                        selectedProducts[index] = product.copy(name = name, price = price) to selectedProducts[index].second
+                        adapter.notifyItemChanged(index)
+                        updateTotal()
+                    }
                 } else {
                     Toast.makeText(requireContext(), "Invalid data", Toast.LENGTH_SHORT).show()
                 }
             }
-            .setNegativeButton("Cance", null)
+            .setNegativeButton("Cancel", null)
             .show()
     }
 
-    private fun refreshProductListLayout() {
-        layoutProductsContainer.removeAllViews()
-        selectedProducts.forEach {
-            val quantity = 0
-            val isCustom = false
-            addProductView(it, quantity, isCustom)
-        }
-    }
-
-    @SuppressLint("MissingInflatedId")
-    private fun addProductView(product: Product, quantity: Int, isCustom: Boolean) {
-        val view = LayoutInflater.from(requireContext()).inflate(R.layout.item_quote_product, layoutProductsContainer, false)
-        view.findViewById<TextView>(R.id.tvProductName).text = product.name
-        view.findViewById<TextView>(R.id.tvProductPrice).text = "$%.2f".format(product.price)
-        val btnDelete = view.findViewById<ImageButton>(R.id.btnDeleteProduct)
-        val btnEdit = view.findViewById<ImageButton>(R.id.btnEditProduct)
-
-        btnDelete.setOnClickListener {
-            selectedProducts.remove(product)
-            layoutProductsContainer.removeView(view)
-            updateTotal()
-        }
-
-        if (product.id.startsWith("custom_")) {
-            btnEdit.visibility = View.VISIBLE
-            btnEdit.setOnClickListener {
-                showEditCustomProductDialog(product)
-            }
-        } else {
-            btnEdit.visibility = View.GONE
-        }
-
-        layoutProductsContainer.addView(view)
-    }
-
     private fun updateTotal() {
-        subtotal = selectedProducts.sumOf { it.price }
+        subtotal = selectedProducts.sumOf { (product, qty) -> product.price * qty }
         val total = subtotal + extraCharges
         tvSubtotalAmount.text = "$%.2f".format(subtotal)
         tvTotalAmount.text = "$%.2f".format(total)
@@ -338,11 +327,13 @@ class EditQuoteBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomSheet
                     val detailsRef = db.collection("quotes").document(id).collection("quoteDetails")
                     detailsRef.get().addOnSuccessListener { existing ->
                         existing.forEach { it.reference.delete() }
-                        selectedProducts.forEach { product ->
+                        selectedProducts.forEachIndexed { position, (product, qty) ->
                             val detail = mapOf(
                                 "productId" to product.id,
                                 "name" to product.name,
-                                "price" to product.price
+                                "price" to product.price,
+                                "quantity" to qty,
+                                "position" to position
                             )
                             detailsRef.add(detail)
                         }
