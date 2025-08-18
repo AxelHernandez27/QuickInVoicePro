@@ -162,15 +162,25 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
     }
 
     private fun deleteInvoice(invoice: Invoice) {
-        db.collection("invoices").document(invoice.id)
-            .delete()
-            .addOnSuccessListener {
-                invoiceList.remove(invoice)
-                adapter.updateList(invoiceList)
+        val detailsRef = db.collection("invoices").document(invoice.id).collection("invoiceDetails")
+
+        // Eliminar todos los detalles primero
+        detailsRef.get().addOnSuccessListener { snapshot ->
+            for (doc in snapshot.documents) {
+                doc.reference.delete()
             }
-            .addOnFailureListener { e ->
-                Toast.makeText(this, "Error deleting invoice", Toast.LENGTH_SHORT).show()
-            }
+
+            // Luego eliminar la factura principal
+            db.collection("invoices").document(invoice.id)
+                .delete()
+                .addOnSuccessListener {
+                    invoiceList.remove(invoice)
+                    adapter.updateList(invoiceList)
+                }
+                .addOnFailureListener {
+                    Toast.makeText(this, "Error deleting invoice", Toast.LENGTH_SHORT).show()
+                }
+        }
     }
 
     private fun confirmDelete(invoice: Invoice) {

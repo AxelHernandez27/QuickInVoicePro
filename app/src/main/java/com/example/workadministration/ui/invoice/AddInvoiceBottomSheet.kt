@@ -91,7 +91,10 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
         recyclerViewProducts.layoutManager = LinearLayoutManager(requireContext())
         invoiceProductAdapter = InvoiceProductAdapter(
             selectedProductsList,
-            onQuantityChanged = { updateTotal() },
+            onQuantityChanged = { position: Int, newQty: Int ->
+                // opcionalmente puedes actualizar productos aquí si quieres
+                updateTotal()
+            },
             onEditCustomProduct = { productId -> showEditCustomProductDialog(productId) },
             onDeleteProduct = { position ->
                 selectedProductsList.removeAt(position)
@@ -99,6 +102,7 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
                 updateTotal()
             }
         )
+
         recyclerViewProducts.adapter = invoiceProductAdapter
         (recyclerViewProducts.itemAnimator as? androidx.recyclerview.widget.SimpleItemAnimator)?.supportsChangeAnimations = false
 

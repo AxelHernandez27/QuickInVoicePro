@@ -13,11 +13,10 @@ import com.example.workadministration.R
 import androidx.recyclerview.widget.RecyclerView
 import com.example.workadministration.ui.product.Product
 import java.util.Collections
-import androidx.core.widget.doOnTextChanged
 
 class InvoiceProductAdapter(
     private val products: MutableList<Pair<Product, Int>>,
-    private val onQuantityChanged: () -> Unit,
+    private val onQuantityChanged: (position: Int, newQty: Int) -> Unit,  // 👈 ahora con params
     private val onEditCustomProduct: (productId: String) -> Unit,
     private val onDeleteProduct: (position: Int) -> Unit
 ) : RecyclerView.Adapter<InvoiceProductAdapter.ProductViewHolder>() {
@@ -31,11 +30,11 @@ class InvoiceProductAdapter(
         val btnDelete = view.findViewById<ImageButton>(R.id.btnDeleteProduct)
         val btnEdit = view.findViewById<ImageButton>(R.id.btnEditProduct)
         var textWatcher: TextWatcher? = null
-
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ProductViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_invoice_product, parent, false)
+        val view = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_invoice_product, parent, false)
         return ProductViewHolder(view)
     }
 
@@ -47,53 +46,55 @@ class InvoiceProductAdapter(
         holder.tvName.text = product.name
         holder.tvPrice.text = "$%.2f".format(product.price)
 
-        // Remueve el watcher viejo si existe para evitar acumulación
+        // 🧹 Evitar múltiples watchers
         holder.textWatcher?.let {
             holder.etQuantity.removeTextChangedListener(it)
         }
 
-        // Actualiza el texto sin disparar el watcher
         holder.etQuantity.setText(quantity.toString())
 
-        // Crea un nuevo watcher
+        // ✅ Nuevo watcher
         val watcher = object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 val qty = s.toString().toIntOrNull()
                 if (qty != null && qty >= 1) {
-                    products[position] = product to qty
-                    onQuantityChanged()
+                    // ⚡ IMPORTANTE: recreamos el par para evitar referencias compartidas
+                    products[holder.adapterPosition] = product.copy() to qty
+                    onQuantityChanged(holder.adapterPosition, qty)
                 }
             }
             override fun afterTextChanged(s: Editable?) {}
         }
 
-        // Asigna el nuevo watcher
         holder.etQuantity.addTextChangedListener(watcher)
         holder.textWatcher = watcher
 
-        // El resto de los botones
+        // ➕ Aumentar cantidad
         holder.btnIncrease.setOnClickListener {
-            val newQty = (products.getOrNull(position)?.second ?: quantity) + 1
-            products[position] = product to newQty
-            notifyItemChanged(position)
-            onQuantityChanged()
+            val newQty = (products.getOrNull(holder.adapterPosition)?.second ?: quantity) + 1
+            products[holder.adapterPosition] = product.copy() to newQty
+            notifyItemChanged(holder.adapterPosition)
+            onQuantityChanged(holder.adapterPosition, newQty)
         }
 
+        // ➖ Disminuir cantidad
         holder.btnDecrease.setOnClickListener {
-            val currentQty = products.getOrNull(position)?.second ?: quantity
+            val currentQty = products.getOrNull(holder.adapterPosition)?.second ?: quantity
             if (currentQty > 1) {
                 val newQty = currentQty - 1
-                products[position] = product to newQty
-                notifyItemChanged(position)
-                onQuantityChanged()
+                products[holder.adapterPosition] = product.copy() to newQty
+                notifyItemChanged(holder.adapterPosition)
+                onQuantityChanged(holder.adapterPosition, newQty)
             }
         }
 
+        // 🗑️ Eliminar
         holder.btnDelete.setOnClickListener {
-            onDeleteProduct(position)
+            onDeleteProduct(holder.adapterPosition)
         }
 
+        // ✏️ Editar solo si es custom
         if (product.id.startsWith("custom_")) {
             holder.btnEdit.visibility = View.VISIBLE
             holder.btnEdit.setOnClickListener {
@@ -104,7 +105,7 @@ class InvoiceProductAdapter(
         }
     }
 
-    // Función para intercambiar posiciones (drag & drop)
+    // 🔄 Soporte drag & drop
     fun moveItem(fromPosition: Int, toPosition: Int) {
         if (fromPosition < toPosition) {
             for (i in fromPosition until toPosition) {
@@ -116,6 +117,6 @@ class InvoiceProductAdapter(
             }
         }
         notifyItemMoved(fromPosition, toPosition)
-        onQuantityChanged()
+        //onQuantityChanged()
     }
 }
