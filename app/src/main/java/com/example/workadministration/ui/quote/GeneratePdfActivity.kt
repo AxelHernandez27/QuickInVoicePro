@@ -264,6 +264,48 @@ class GeneratePdfActivity : AppCompatActivity() {
 
         yPosition += notesHeight + 20f
 
+// ================================
+// Fecha de emisión y vencimiento
+// ================================
+        val issueFormatter = SimpleDateFormat("MMMM dd, yyyy", Locale.ENGLISH)
+        issueFormatter.timeZone = TimeZone.getTimeZone("America/Mexico_City")
+
+        val issueDate = issueFormatter.format(date) // fecha original de la cotización
+        val calendar = Calendar.getInstance()
+        calendar.time = date
+        calendar.add(Calendar.DAY_OF_YEAR, 30)
+        val expiryDate = issueFormatter.format(calendar.time)
+
+        paint.textAlign = Paint.Align.CENTER
+        paint.typeface = Typeface.DEFAULT_BOLD
+        paint.textSize = 11f
+        paint.color = Color.BLACK
+
+        canvas.drawText("Issued on: $issueDate", pageWidth / 2f, yPosition, paint)
+        yPosition += 15f
+        canvas.drawText("Valid until: $expiryDate", pageWidth / 2f, yPosition, paint)
+
+        yPosition += 25f
+
+
+// ================================
+// Aviso de validez con fechas explícitas
+// ================================
+        val validityNotice = "This quotation shall remain valid for thirty (30) days from the date of issue. After this period, new quotation must be requested."
+
+        val noticePaint = TextPaint().apply {
+            isAntiAlias = true
+            color = Color.BLACK
+            textSize = 10f
+            typeface = Typeface.DEFAULT
+        }
+        val staticLayoutNotice = createStaticLayout(validityNotice, noticePaint, pageWidth - 40)
+        canvas.save()
+        canvas.translate(20f, yPosition)
+        staticLayoutNotice.draw(canvas)
+        canvas.restore()
+
+        yPosition += staticLayoutNotice.height + 20f
         pdfDocument.finishPage(page)
 
         val safeName = customerName.replace("[^a-zA-Z0-9]".toRegex(), "").take(15)
