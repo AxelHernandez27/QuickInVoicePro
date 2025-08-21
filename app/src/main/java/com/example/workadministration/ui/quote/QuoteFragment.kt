@@ -53,6 +53,8 @@ class QuoteFragment : Fragment(), AddCustomerBottomSheet.OnCustomerAddedListener
             requireContext(),
             onDeleteClick = { quote -> confirmDelete(quote) },
             onEditClick = { quote -> openEditScreen(quote) },
+            onItemClick = { quote -> confirmConvert(quote) } // 👈 aquí agregas la conversión
+
         )
         recyclerView.adapter = adapter
 
@@ -72,6 +74,49 @@ class QuoteFragment : Fragment(), AddCustomerBottomSheet.OnCustomerAddedListener
 
     override fun onQuoteSaved() {
         getQuotes()
+    }
+    private fun convertQuoteToInvoice(quote: Quote) {
+        val invoiceId = db.collection("invoices").document().id
+
+        val invoice = com.example.workadministration.ui.invoice.Invoice(
+            id = invoiceId,
+            customerId = quote.customerId,
+            customerName = quote.customerName,
+            customerAddress = quote.customerAddress,
+            date = quote.date,
+            extraCharges = quote.extraCharges,
+            notes = quote.notes,
+            products = quote.products.map {
+                com.example.workadministration.ui.invoice.ProductDetail(
+                    productId = it.productId,
+                    name = it.name,
+                    quantity = it.quantity,
+                    price = it.price,
+                    position = it.position
+                )
+            },
+            total = quote.total
+        )
+
+        db.collection("invoices").document(invoiceId).set(invoice)
+            .addOnSuccessListener {
+                Toast.makeText(requireContext(), "Quote convertida a Invoice ✅", Toast.LENGTH_SHORT).show()
+            }
+            .addOnFailureListener {
+                Toast.makeText(requireContext(), "Error al convertir la Quote ❌", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun confirmConvert(quote: Quote) {
+        val alert = androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Convertir a Invoice")
+            .setMessage("¿Quieres convertir esta Quote en una Invoice?")
+            .setPositiveButton("Sí") { _, _ ->
+                convertQuoteToInvoice(quote)
+            }
+            .setNegativeButton("Cancelar", null)
+            .create()
+        alert.show()
     }
 
     private fun getQuotes() {

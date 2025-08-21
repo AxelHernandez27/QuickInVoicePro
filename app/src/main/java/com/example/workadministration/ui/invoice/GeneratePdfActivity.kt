@@ -47,7 +47,22 @@ class GeneratePdfActivity : AppCompatActivity() {
                     val total = doc.getDouble("total") ?: 0.0
                     val notes = doc.getString("notes") ?: ""
                     val extra = doc.getDouble("extraCharges") ?: 0.0
-                    val date = doc.getTimestamp("date")?.toDate() ?: Date()
+0
+                    // Manejo seguro de la fecha para que funcione aunque sea String o Timestamp
+                    val dateField = doc.get("date")
+                    val date = when (dateField) {
+                        is com.google.firebase.Timestamp -> dateField.toDate()
+                        is String -> {
+                            try {
+                                val formatter = SimpleDateFormat("MM/dd/yyyy hh:mm a", Locale("en", "US"))
+                                formatter.timeZone = TimeZone.getTimeZone("America/Mexico_City")
+                                formatter.parse(dateField) ?: Date()
+                            } catch (e: Exception) {
+                                Date()
+                            }
+                        }
+                        else -> Date()
+                    }
 
                     db.collection("customers").document(customerId)
                         .get()

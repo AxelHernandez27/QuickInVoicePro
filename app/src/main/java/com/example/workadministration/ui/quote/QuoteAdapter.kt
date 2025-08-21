@@ -14,7 +14,9 @@ class QuoteAdapter (
     private var quotes: List<Quote>,
     private val context: Context,
     private val onEditClick: (Quote) -> Unit,
-    private val onDeleteClick: (Quote) -> Unit
+    private val onDeleteClick: (Quote) -> Unit,
+    private val onItemClick: (Quote) -> Unit // 👈 agregamos este callback
+
 ) : RecyclerView.Adapter<QuoteAdapter.QuoteViewHolder>() {
 
     class QuoteViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
@@ -50,6 +52,10 @@ class QuoteAdapter (
         holder.btnEdit.setOnClickListener {
             onEditClick(quote)
         }
+
+        // 👇 Click en todo el item para convertir
+        holder.itemView.setOnClickListener { onItemClick(quote) }
+
         holder.btnGeneratePDF.setOnClickListener {
             val intent = Intent(context, GeneratePdfActivity::class.java)
             intent.putExtra("quoteId", quote.id)

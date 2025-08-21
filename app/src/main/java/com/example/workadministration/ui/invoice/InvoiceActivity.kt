@@ -83,65 +83,71 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
     }
 
     private fun getInvoices() {
-        val db = FirebaseFirestore.getInstance()
+        invoiceList.clear()
 
         db.collection("invoices")
             .orderBy("date", com.google.firebase.firestore.Query.Direction.DESCENDING)
             .get()
             .addOnSuccessListener { invoicesSnapshot ->
 
-            invoiceList.clear()
+                val tempList = mutableListOf<Invoice>()
+                var remaining = invoicesSnapshot.size() // contar cuántas facturas quedan
 
-            for (invoiceDoc in invoicesSnapshot) {
-                val dateObj = invoiceDoc.getTimestamp("date")?.toDate()
-                val invoiceId = invoiceDoc.id
-                val customerId = invoiceDoc.getString("customerId") ?: ""
-                val customerName = invoiceDoc.getString("customerName") ?: ""
-                val customerAddress = invoiceDoc.getString("customerAddress") ?: ""
-                val timestamp = invoiceDoc.getTimestamp("date")
-                val dateFormatted = if (timestamp != null) {
-                    val dateObj = timestamp.toDate()
-                    val formatter = SimpleDateFormat("MM/dd/yyyy hh:mm a", Locale("en", "US"))
-                    formatter.timeZone = TimeZone.getTimeZone("America/Mexico_City") // Hora centro México
-                    formatter.format(dateObj)
-                } else {
-                    ""
-                }
+                for (invoiceDoc in invoicesSnapshot) {
+                    val invoiceId = invoiceDoc.id
+                    val customerId = invoiceDoc.getString("customerId") ?: ""
+                    val customerName = invoiceDoc.getString("customerName") ?: ""
+                    val customerAddress = invoiceDoc.getString("customerAddress") ?: ""
+                    val dateField = invoiceDoc.get("date")
+                    val dateFormatted = if (dateField is com.google.firebase.Timestamp) {
+                        val formatter = SimpleDateFormat("MM/dd/yyyy hh:mm a", Locale("en", "US"))
+                        formatter.timeZone = TimeZone.getTimeZone("America/Mexico_City")
+                        formatter.format(dateField.toDate())
+                    } else dateField as? String ?: ""
 
-                val extraCharges = invoiceDoc.getDouble("extraCharges") ?: 0.0
-                val notes = invoiceDoc.getString("notes") ?: ""
-                val total = invoiceDoc.getDouble("total") ?: 0.0
+                    val extraCharges = invoiceDoc.getDouble("extraCharges") ?: 0.0
+                    val notes = invoiceDoc.getString("notes") ?: ""
+                    val total = invoiceDoc.getDouble("total") ?: 0.0
 
-                db.collection("invoices").document(invoiceId)
-                    .collection("invoiceDetails")
-                    .get()
-                    .addOnSuccessListener { detailsSnapshot ->
-                        val products = detailsSnapshot.map { detailDoc ->
-                            ProductDetail(
-                                productId = detailDoc.getString("productId") ?: "",
-                                name = detailDoc.getString("productName") ?: "",
-                                price = detailDoc.getDouble("price") ?: 0.0
+                    db.collection("invoices").document(invoiceId)
+                        .collection("invoiceDetails")
+                        .get()
+                        .addOnSuccessListener { detailsSnapshot ->
+                            val products = detailsSnapshot.map { detailDoc ->
+                                ProductDetail(
+                                    productId = detailDoc.getString("productId") ?: "",
+                                    name = detailDoc.getString("productName") ?: "",
+                                    price = detailDoc.getDouble("price") ?: 0.0
+                                )
+                            }
+
+                            val invoice = Invoice(
+                                id = invoiceId,
+                                customerId = customerId,
+                                customerName = customerName,
+                                customerAddress = customerAddress,
+                                date = dateFormatted,
+                                extraCharges = extraCharges,
+                                notes = notes,
+                                total = total,
+                                products = products
                             )
+
+                            tempList.add(invoice)
+                            remaining--
+
+                            // Solo actualizar la lista cuando todas las facturas estén listas
+                            if (remaining == 0) {
+                                invoiceList.clear()
+                                invoiceList.addAll(tempList)
+                                adapter.notifyDataSetChanged()
+                            }
                         }
-
-                        val invoice = Invoice(
-                            id = invoiceId,
-                            customerId = customerId,
-                            customerName = customerName,
-                            customerAddress = customerAddress,
-                            date = dateFormatted,
-                            extraCharges = extraCharges,
-                            notes = notes,
-                            total = total,
-                            products = products
-                        )
-
-                        invoiceList.add(invoice)
-                        adapter.notifyDataSetChanged()
-                    }
+                }
             }
-        }
     }
+
+
 
     private fun filterInvoices(text: String) {
         val filteredList = invoiceList.filter {

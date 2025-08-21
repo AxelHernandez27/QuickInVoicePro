@@ -53,6 +53,8 @@ class QuoteActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAdde
             this,
             onDeleteClick = { quote -> confirmDelete(quote) },
             onEditClick = { quote -> openEditScreen(quote) },
+            onItemClick = { quote -> confirmConvert(quote) } // 👈 aquí agregas la conversión
+
         )
 
         recyclerView.adapter = adapter
@@ -76,12 +78,73 @@ class QuoteActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAdde
     override fun onQuoteSaved() {
         getQuotes()
     }
+    private fun convertQuoteToInvoice(quote: Quote) {
+        val invoiceId = db.collection("invoices").document().id
+
+        // Mapear productos de la quote a los productos de la invoice
+        val invoiceProducts = quote.products.map { product ->
+            com.example.workadministration.ui.invoice.ProductDetail(
+                productId = product.productId,
+                name = product.name,       // Aquí usamos product.name como en getQuotes()
+                price = product.price
+            )
+        }
+
+        val invoice = com.example.workadministration.ui.invoice.Invoice(
+            id = invoiceId,
+            customerId = quote.customerId,
+            customerName = quote.customerName,
+            customerAddress = quote.customerAddress,
+            date = quote.date,
+            extraCharges = quote.extraCharges,
+            notes = quote.notes,
+            products = invoiceProducts,
+            total = quote.total
+        )
+
+        // Guardar invoice principal
+        db.collection("invoices").document(invoiceId).set(invoice)
+            .addOnSuccessListener {
+                // Guardar los detalles de la invoice
+                val detailsRef = db.collection("invoices").document(invoiceId).collection("invoiceDetails")
+                val batch = db.batch()
+
+                invoiceProducts.forEachIndexed { index, product ->
+                    val docRef = detailsRef.document()
+                    val data = hashMapOf(
+                        "productId" to product.productId,
+                        "productName" to product.name,  // Mantener consistencia con la BD
+                        "price" to product.price,
+                    )
+                    batch.set(docRef, data)
+                }
+
+                batch.commit().addOnSuccessListener {
+                    Toast.makeText(this, "Quote convertida a Invoice ✅", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .addOnFailureListener {
+                Toast.makeText(this, "Error al convertir la Quote ❌", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+
+    private fun confirmConvert(quote: Quote) {
+        val alert = androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Convertir a Invoice")
+            .setMessage("¿Quieres convertir esta Quote en una Invoice?")
+            .setPositiveButton("Sí") { _, _ ->
+                convertQuoteToInvoice(quote)
+            }
+            .setNegativeButton("Cancelar", null)
+            .create()
+        alert.show()
+    }
 
     private fun getQuotes() {
         val db = FirebaseFirestore.getInstance()
-
         db.collection("quotes")
-            .orderBy("date", com.google.firebase.firestore.Query.Direction.DESCENDING)
+            .orderBy("date") // ⚠️ Si es String, ordenará alfabéticamente
             .get()
             .addOnSuccessListener { quotesSnapshot ->
 
