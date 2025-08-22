@@ -58,6 +58,16 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        val bottomSheet = dialog?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+        bottomSheet?.let {
+            val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(it)
+            behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+            behavior.isDraggable = false
+        }
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.form_ticket_agregar, container, false)
 
@@ -82,6 +92,9 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
             val addCustomerBottomSheet = AddCustomerBottomSheet(this)
             addCustomerBottomSheet.show(parentFragmentManager, "AddCustomerBottomSheet")
         }
+
+        val btnClose = view.findViewById<ImageButton>(R.id.btnClose)
+        btnClose.setOnClickListener { dismiss() }
 
         etExtraCharges.doOnTextChanged { text, _, _, _ ->
             extraCharges = text.toString().toDoubleOrNull() ?: 0.0

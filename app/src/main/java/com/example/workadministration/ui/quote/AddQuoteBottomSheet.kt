@@ -47,6 +47,16 @@ class AddQuoteBottomSheet(private var listener: OnQuoteSavedListener) : BottomSh
     private var subtotal = 0.0
     private var extraCharges = 0.0
 
+    override fun onStart() {
+        super.onStart()
+        val bottomSheet = dialog?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+        bottomSheet?.let {
+            val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(it)
+            behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+            behavior.isDraggable = false
+        }
+    }
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         val view = inflater.inflate(R.layout.form_quote_agregar, container, false)
 
@@ -81,6 +91,9 @@ class AddQuoteBottomSheet(private var listener: OnQuoteSavedListener) : BottomSh
 
         btnSave.setOnClickListener { saveQuote() }
         btnCancel.setOnClickListener { dismiss() }
+
+        val btnClose = view.findViewById<ImageButton>(R.id.btnClose)
+        btnClose.setOnClickListener { dismiss() }
 
         return view
     }

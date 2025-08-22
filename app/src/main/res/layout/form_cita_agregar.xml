@@ -1,6 +1,10 @@
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
     android:background="#FFFFFF"
     android:padding="24dp">
 
@@ -9,23 +13,43 @@
         android:layout_height="wrap_content"
         android:orientation="vertical">
 
-        <TextView
-            android:text="Add Appointment"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:textColor="#000000"
-            android:layout_marginBottom="24dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
+        <!-- Header con título y X -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="24dp">
 
-        <!-- Client Selector -->
+            <TextView
+                android:id="@+id/tvFormTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Add Appointment"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                android:textColor="#000000"
+                android:layout_centerVertical="true"
+                android:layout_alignParentStart="true" />
+
+            <ImageButton
+                android:id="@+id/btnClose"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:src="@android:drawable/ic_menu_close_clear_cancel"
+                android:contentDescription="Close"
+                app:tint="#666666" />
+        </RelativeLayout>
+
+        <!-- Seleccionar Cliente -->
         <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:text="Select Client"
             android:textSize="16sp"
             android:textColor="#000000"
-            android:layout_marginBottom="8dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+            android:layout_marginBottom="8dp"/>
 
         <AutoCompleteTextView
             android:id="@+id/autoCompleteClient"
@@ -38,14 +62,14 @@
             android:textColorHint="#999999"
             android:layout_marginBottom="24dp"/>
 
-        <!-- Date Picker -->
+        <!-- Fecha de cita -->
         <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:text="Appointment Date"
             android:textSize="16sp"
             android:textColor="#000000"
-            android:layout_marginBottom="8dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+            android:layout_marginBottom="8dp"/>
 
         <EditText
             android:id="@+id/etDate"
@@ -60,30 +84,32 @@
             android:textColorHint="#999999"
             android:layout_marginBottom="24dp"/>
 
+        <!-- Botones -->
         <LinearLayout
-            android:orientation="horizontal"
-            android:gravity="end"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end">
 
             <Button
                 android:id="@+id/btnCancel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:text="Cancel"
                 android:background="@drawable/rounded_button_red"
                 android:textColor="#FFFFFF"
                 android:textAllCaps="false"
-                android:layout_marginEnd="8dp"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
+                android:layout_marginEnd="8dp"/>
 
             <Button
                 android:id="@+id/btnSave"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:text="Save"
                 android:background="@drawable/rounded_button_green"
                 android:textColor="#FFFFFF"
-                android:textAllCaps="false"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
+                android:textAllCaps="false"/>
         </LinearLayout>
+
     </LinearLayout>
-</ScrollView>
+</androidx.core.widget.NestedScrollView>

@@ -38,7 +38,8 @@
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
                 android:src="@android:drawable/ic_menu_close_clear_cancel"
-                android:contentDescription="Close" />
+                android:contentDescription="Close"
+                app:tint="#666666" />
         </RelativeLayout>
 
         <!-- Nombre -->

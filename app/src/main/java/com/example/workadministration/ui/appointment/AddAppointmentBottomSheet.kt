@@ -51,19 +51,14 @@ class AddAppointmentBottomSheet : BottomSheetDialogFragment() {
         this.listener = listener
     }
 
-    private fun checkCalendarPermissions(): Boolean {
-        val readPermission = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.READ_CALENDAR)
-        val writePermission = ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.WRITE_CALENDAR)
-
-        if (readPermission != PackageManager.PERMISSION_GRANTED || writePermission != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(
-                requireActivity(),
-                arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR),
-                1001
-            )
-            return false
+    override fun onStart() {
+        super.onStart()
+        val bottomSheet = dialog?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+        bottomSheet?.let {
+            val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(it)
+            behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+            behavior.isDraggable = false
         }
-        return true
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -91,6 +86,9 @@ class AddAppointmentBottomSheet : BottomSheetDialogFragment() {
 
         btnSave.setOnClickListener { saveAppointment() }
         btnCancel.setOnClickListener { dismiss() }
+
+        val btnClose = view.findViewById<ImageButton>(R.id.btnClose)
+        btnClose.setOnClickListener { dismiss() }
 
         return view
     }
