@@ -64,6 +64,16 @@ class EditAppointmentBottomSheet : BottomSheetDialogFragment() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        val bottomSheet = dialog?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+        bottomSheet?.let {
+            val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(it)
+            behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+            behavior.isDraggable = false
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         appointmentId = arguments?.getString(ARG_APPOINTMENT_ID)
@@ -90,6 +100,9 @@ class EditAppointmentBottomSheet : BottomSheetDialogFragment() {
 
         btnSave.setOnClickListener { updateAppointment() }
         btnCancel.setOnClickListener { dismiss() }
+
+        val btnClose = view.findViewById<ImageButton>(R.id.btnClose)
+        btnClose.setOnClickListener { dismiss() }
 
         return view
     }

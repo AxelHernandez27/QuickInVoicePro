@@ -4,8 +4,10 @@ import android.app.Dialog
 import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.Toast
 import com.example.workadministration.R
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
@@ -29,6 +31,16 @@ class EditProductBottomSheet(
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        val bottomSheet = dialog?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+        bottomSheet?.let {
+            val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(it)
+            behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
+            behavior.isDraggable = false
+        }
+    }
+
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         val dialog = super.onCreateDialog(savedInstanceState)
         val view = LayoutInflater.from(context).inflate(R.layout.form_producto_editar, null)
@@ -47,6 +59,9 @@ class EditProductBottomSheet(
         inputDescription.setText(product.description)
 
         btnCancel.setOnClickListener { dismiss() }
+
+        val btnClose = view.findViewById<ImageButton>(R.id.btnClose)
+        btnClose.setOnClickListener { dismiss() }
 
         btnUpdate.setOnClickListener {
             val name = inputName.text.toString().trim()
