@@ -13,15 +13,17 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.workadministration.R
-import com.example.workadministration.ui.NavigationUtil
 import com.example.workadministration.ui.customer.AddCustomerBottomSheet
 import com.example.workadministration.ui.customer.Customer
-import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.example.workadministration.ui.invoice.Invoice
+import com.example.workadministration.ui.invoice.ProductDetail as InvoiceProductDetail
 import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat
 import java.util.*
 
-class QuoteFragment : Fragment(), AddCustomerBottomSheet.OnCustomerAddedListener, AddQuoteBottomSheet.OnQuoteSavedListener {
+class QuoteFragment : Fragment(),
+    AddCustomerBottomSheet.OnCustomerAddedListener,
+    AddQuoteBottomSheet.OnQuoteSavedListener {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var searchQuote: EditText
@@ -40,10 +42,9 @@ class QuoteFragment : Fragment(), AddCustomerBottomSheet.OnCustomerAddedListener
 
         val btnAgregar = view.findViewById<ImageButton>(R.id.btnAgregarQuote)
         btnAgregar.setOnClickListener {
-            val bottomSheet = AddQuoteBottomSheet(this) // 'this' porque QuoteFragment implementa OnQuoteSavedListener
+            val bottomSheet = AddQuoteBottomSheet(this)
             bottomSheet.show(parentFragmentManager, "AddQuoteBottomSheet")
         }
-
 
         recyclerView = view.findViewById(R.id.recyclerQuotes)
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
@@ -53,8 +54,7 @@ class QuoteFragment : Fragment(), AddCustomerBottomSheet.OnCustomerAddedListener
             requireContext(),
             onDeleteClick = { quote -> confirmDelete(quote) },
             onEditClick = { quote -> openEditScreen(quote) },
-            onItemClick = { quote -> confirmConvert(quote) } // 👈 aquí agregas la conversión
-
+            onItemClick = { quote -> confirmConvert(quote) } // 👈 conversión
         )
         recyclerView.adapter = adapter
 
@@ -75,10 +75,19 @@ class QuoteFragment : Fragment(), AddCustomerBottomSheet.OnCustomerAddedListener
     override fun onQuoteSaved() {
         getQuotes()
     }
-    private fun convertQuoteToInvoice(quote: Quote) {
-        val invoiceId = db.collection("invoices").document().id
 
-        val invoice = com.example.workadministration.ui.invoice.Invoice(
+    /**
+     * Convierte un quote en invoice y elimina el quote.
+     */
+    /**
+     * Convierte un quote en invoice y elimina el quote.
+     */
+    private fun convertQuoteToInvoice(quote: Quote) {
+        val invoiceRef = db.collection("invoices").document()
+        val invoiceId = invoiceRef.id
+
+        // Creamos la Invoice SIN productos
+        val invoice = Invoice(
             id = invoiceId,
             customerId = quote.customerId,
             customerName = quote.customerName,
@@ -86,45 +95,88 @@ class QuoteFragment : Fragment(), AddCustomerBottomSheet.OnCustomerAddedListener
             date = quote.date,
             extraCharges = quote.extraCharges,
             notes = quote.notes,
-            products = quote.products.map {
-                com.example.workadministration.ui.invoice.ProductDetail(
-                    productId = it.productId,
-                    name = it.name,
-                    quantity = it.quantity,
-                    price = it.price,
-                    position = it.position
-                )
-            },
             total = quote.total
         )
 
-        db.collection("invoices").document(invoiceId).set(invoice)
+        // Guardar la Invoice primero
+        invoiceRef.set(invoice)
             .addOnSuccessListener {
-                Toast.makeText(requireContext(), "Quote convertida a Invoice ✅", Toast.LENGTH_SHORT).show()
+                // Guardar los productos en la subcolección "invoiceDetails"
+                val batch = db.batch()
+                val detailsRef = invoiceRef.collection("invoiceDetails")
+
+                quote.products.forEach { product ->
+                    val detail = InvoiceProductDetail(
+                        productId = product.productId,
+                        name = product.name,
+                        quantity = product.quantity,
+                        price = product.price,
+                        position = product.position
+                    )
+                    val detailRef = detailsRef.document()
+                    batch.set(detailRef, detail)
+                }
+
+                batch.commit()
+                    .addOnSuccessListener {
+                        // Una vez todo guardado, eliminar el quote original
+                        db.collection("quotes").document(quote.id).delete()
+                            .addOnSuccessListener {
+                                quoteList.remove(quote)
+                                adapter.updateList(quoteList)
+                                Toast.makeText(
+                                    requireContext(),
+                                    "Quote successfully converted to Invoice",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                            .addOnFailureListener {
+                                Toast.makeText(
+                                    requireContext(),
+                                    "Invoice created but failed to delete Quote",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                    }
+                    .addOnFailureListener {
+                        Toast.makeText(
+                            requireContext(),
+                            "Failed to save invoice details",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
             }
             .addOnFailureListener {
-                Toast.makeText(requireContext(), "Error al convertir la Quote ❌", Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    requireContext(),
+                    "Failed to create Invoice",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
     }
 
+
+    /**
+     * Pregunta antes de convertir.
+     */
     private fun confirmConvert(quote: Quote) {
         val alert = androidx.appcompat.app.AlertDialog.Builder(requireContext())
-            .setTitle("Convertir a Invoice")
-            .setMessage("¿Quieres convertir esta Quote en una Invoice?")
-            .setPositiveButton("Sí") { _, _ ->
-                convertQuoteToInvoice(quote)
-            }
-            .setNegativeButton("Cancelar", null)
+            .setTitle("Convert to Invoice")
+            .setMessage("Do you want to convert this Quote into an Invoice? This will permanently delete the Quote.")
+            .setPositiveButton("Yes") { _, _ -> convertQuoteToInvoice(quote) }
+            .setNegativeButton("Cancel", null)
             .create()
         alert.show()
     }
 
+    /**
+     * Obtener quotes desde Firestore.
+     */
     private fun getQuotes() {
         db.collection("quotes")
             .orderBy("date", com.google.firebase.firestore.Query.Direction.DESCENDING)
             .get()
             .addOnSuccessListener { quotesSnapshot ->
-
                 quoteList.clear()
 
                 for (quoteDoc in quotesSnapshot) {
@@ -153,8 +205,10 @@ class QuoteFragment : Fragment(), AddCustomerBottomSheet.OnCustomerAddedListener
                             val products = detailsSnapshot.map { detailDoc ->
                                 ProductDetail(
                                     productId = detailDoc.getString("productId") ?: "",
-                                    name = detailDoc.getString("productName") ?: "",
-                                    price = detailDoc.getDouble("price") ?: 0.0
+                                    name = detailDoc.getString("name") ?: "",
+                                    quantity = detailDoc.getLong("quantity") ?: 0, // 👈 aseguramos cantidad
+                                    price = detailDoc.getDouble("price") ?: 0.0,
+                                    position = detailDoc.getLong("position")?.toInt() ?: 0
                                 )
                             }
 
@@ -187,7 +241,8 @@ class QuoteFragment : Fragment(), AddCustomerBottomSheet.OnCustomerAddedListener
 
     private fun openEditScreen(quote: Quote) {
         val editQuoteSheet = EditQuoteBottomSheet.newInstance(quote.id)
-        editQuoteSheet.setOnQuoteUpdatedListener(object : EditQuoteBottomSheet.OnQuoteUpdatedListener {
+        editQuoteSheet.setOnQuoteUpdatedListener(object :
+            EditQuoteBottomSheet.OnQuoteUpdatedListener {
             override fun onQuoteUpdated() {
                 getQuotes()
             }
@@ -196,16 +251,31 @@ class QuoteFragment : Fragment(), AddCustomerBottomSheet.OnCustomerAddedListener
     }
 
     private fun deleteQuote(quote: Quote) {
-        db.collection("quotes").document(quote.id)
-            .delete()
-            .addOnSuccessListener {
-                quoteList.remove(quote)
-                adapter.updateList(quoteList)
-            }
-            .addOnFailureListener {
-                Toast.makeText(requireContext(), "Error deleting quote", Toast.LENGTH_SHORT).show()
+        val quoteRef = db.collection("quotes").document(quote.id)
+
+        // Primero borramos la subcolección
+        quoteRef.collection("quoteDetails")
+            .get()
+            .addOnSuccessListener { detailsSnapshot ->
+                val batch = db.batch()
+                for (doc in detailsSnapshot.documents) {
+                    batch.delete(doc.reference)
+                }
+                // Ahora borramos el documento principal
+                batch.delete(quoteRef)
+
+                batch.commit()
+                    .addOnSuccessListener {
+                        quoteList.remove(quote)
+                        adapter.updateList(quoteList)
+                        Toast.makeText(requireContext(), "Quote deleted", Toast.LENGTH_SHORT).show()
+                    }
+                    .addOnFailureListener {
+                        Toast.makeText(requireContext(), "Failed to delete Quote", Toast.LENGTH_SHORT).show()
+                    }
             }
     }
+
 
     private fun confirmDelete(quote: Quote) {
         val alert = androidx.appcompat.app.AlertDialog.Builder(requireContext())
