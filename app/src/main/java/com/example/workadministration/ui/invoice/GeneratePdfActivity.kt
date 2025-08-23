@@ -265,6 +265,57 @@ class GeneratePdfActivity : AppCompatActivity() {
 
         pdfDocument.finishPage(page)
 
+// ---------- NUEVA PÁGINA PARA VENMO Y CASHAPP ----------
+        val pageInfo2 = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 2).create()
+        val page2 = pdfDocument.startPage(pageInfo2)
+        val canvas2 = page2.canvas
+        val paint2 = Paint()
+
+// Título de la página 2
+        paint2.textAlign = Paint.Align.CENTER
+        paint2.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        paint2.textSize = 18f
+        paint2.color = Color.BLACK
+        canvas2.drawText("Payment Methods", pageWidth / 2f, 50f, paint2)
+
+// Cargar imágenes desde drawable
+        val venmo = BitmapFactory.decodeResource(resources, R.drawable.venmoapp)
+        val cashapp = BitmapFactory.decodeResource(resources, R.drawable.cashapp)
+
+        // Escalar más grandes (manteniendo proporción)
+        fun scaleBitmap(bitmap: Bitmap, maxWidth: Int): Bitmap {
+            val ratio = bitmap.width.toFloat() / bitmap.height.toFloat()
+            val newWidth = maxWidth
+            val newHeight = (newWidth / ratio).toInt()
+            return Bitmap.createScaledBitmap(bitmap, newWidth, newHeight, false)
+        }
+
+        val qrSize = 200
+        val venmoScaled = scaleBitmap(venmo, qrSize)
+        val cashappScaled = scaleBitmap(cashapp, qrSize)
+
+// --- Dibujar Venmo ---
+        var yPosition2 = 120f
+        val venmoX = (pageWidth - venmoScaled.width) / 2f
+        canvas2.drawBitmap(venmoScaled, venmoX, yPosition2, paint2)
+
+// Texto debajo
+        paint2.textSize = 14f
+        paint2.typeface = Typeface.DEFAULT
+        canvas2.drawText("Venmo", pageWidth / 2f, yPosition2 + venmoScaled.height + 20f, paint2)
+
+// --- Dibujar CashApp ---
+        yPosition2 += venmoScaled.height + 80f
+        val cashappX = (pageWidth - cashappScaled.width) / 2f
+        canvas2.drawBitmap(cashappScaled, cashappX, yPosition2, paint2)
+
+// Texto debajo
+        canvas2.drawText("CashApp", pageWidth / 2f, yPosition2 + cashappScaled.height + 20f, paint2)
+
+// Cerrar página 2
+        pdfDocument.finishPage(page2)
+
+
         val safeName = customerName.replace("[^a-zA-Z0-9]".toRegex(), "").take(15)
         val fileName = "${safeName}_${SimpleDateFormat("ddMMyyyy_HHmmss", Locale("es", "MX")).format(Date())}.pdf"
         val filePath = File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), fileName)
