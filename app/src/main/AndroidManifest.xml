@@ -26,6 +26,7 @@
 
         <activity android:name=".ui.product.ProductActivity" />
         <activity android:name=".ui.invoice.CustomerInvoicesActivity" />
+        <activity android:name=".ui.dashboard.DashboardActivity" />
 
         <activity android:name=".ui.invoice.InvoiceActivity" />
         <activity android:name=".ui.invoice.GeneratePdfActivity" />

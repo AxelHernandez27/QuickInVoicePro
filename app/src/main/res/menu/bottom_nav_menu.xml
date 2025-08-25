@@ -18,4 +18,9 @@
         android:id="@+id/nav_tickets"
         android:icon="@drawable/receipt_long"
         android:title="Tickets" />
+
+    <item
+        android:id="@+id/nav_dashboard"
+        android:icon="@drawable/analytics"
+        android:title="Dashboard" />
 </menu>
