@@ -1,17 +1,12 @@
 package com.example.workadministration.ui.invoice
 
 import android.annotation.SuppressLint
-import android.app.Activity
-import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.registerForActivityResult
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -22,11 +17,10 @@ import com.example.workadministration.ui.customer.Customer
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.firestore.FirebaseFirestore
 import java.text.SimpleDateFormat
-import java.util.Locale
-import java.util.TimeZone
+import java.util.*
 
-class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAddedListener, AddInvoiceBottomSheet.OnInvoiceSavedListener {
-
+class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAddedListener,
+    AddInvoiceBottomSheet.OnInvoiceSavedListener {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var searchInvoice: EditText
@@ -34,8 +28,7 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
     private val invoiceList = mutableListOf<Invoice>()
     private val db = FirebaseFirestore.getInstance()
 
-    override fun onCustomerAdded(customer: Customer) {
-    }
+    override fun onCustomerAdded(customer: Customer) {}
 
     @SuppressLint("MissingInflatedId")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,8 +41,6 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
             bottomSheet.show(supportFragmentManager, "AddInvoiceBottomSheet")
         }
 
-        recyclerView = findViewById(R.id.recyclerTickets)
-        recyclerView = findViewById(R.id.recyclerTickets)
         recyclerView = findViewById(R.id.recyclerTickets)
         recyclerView.layoutManager = LinearLayoutManager(this)
 
@@ -85,13 +76,22 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
     private fun getInvoices() {
         invoiceList.clear()
 
+        val displayFormat = SimpleDateFormat("MM/dd/yyyy hh:mm a", Locale.US)
+        displayFormat.timeZone = TimeZone.getTimeZone("America/Mexico_City")
+
         db.collection("invoices")
             .orderBy("date", com.google.firebase.firestore.Query.Direction.DESCENDING)
             .get()
             .addOnSuccessListener { invoicesSnapshot ->
 
                 val tempList = mutableListOf<Invoice>()
-                var remaining = invoicesSnapshot.size() // contar cuántas facturas quedan
+                var remaining = invoicesSnapshot.size()
+
+                if (remaining == 0) {
+                    invoiceList.clear()
+                    adapter.notifyDataSetChanged()
+                    return@addOnSuccessListener
+                }
 
                 for (invoiceDoc in invoicesSnapshot) {
                     val invoiceId = invoiceDoc.id
@@ -99,11 +99,7 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
                     val customerName = invoiceDoc.getString("customerName") ?: ""
                     val customerAddress = invoiceDoc.getString("customerAddress") ?: ""
                     val dateField = invoiceDoc.get("date")
-                    val dateFormatted = if (dateField is com.google.firebase.Timestamp) {
-                        val formatter = SimpleDateFormat("MM/dd/yyyy hh:mm a", Locale("en", "US"))
-                        formatter.timeZone = TimeZone.getTimeZone("America/Mexico_City")
-                        formatter.format(dateField.toDate())
-                    } else dateField as? String ?: ""
+                    val dateValue = if (dateField is com.google.firebase.Timestamp) dateField.toDate() else Date()
 
                     val extraCharges = invoiceDoc.getDouble("extraCharges") ?: 0.0
                     val notes = invoiceDoc.getString("notes") ?: ""
@@ -126,7 +122,7 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
                                 customerId = customerId,
                                 customerName = customerName,
                                 customerAddress = customerAddress,
-                                date = dateFormatted,
+                                date = displayFormat.format(dateValue), // <-- aquí el formato MM/dd/yyyy hh:mm a
                                 extraCharges = extraCharges,
                                 notes = notes,
                                 total = total,
@@ -136,8 +132,11 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
                             tempList.add(invoice)
                             remaining--
 
-                            // Solo actualizar la lista cuando todas las facturas estén listas
                             if (remaining == 0) {
+                                // Ordenamos por fecha descending usando el Date real
+                                tempList.sortByDescending {
+                                    displayFormat.parse(it.date)
+                                }
                                 invoiceList.clear()
                                 invoiceList.addAll(tempList)
                                 adapter.notifyDataSetChanged()
@@ -148,11 +147,11 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
     }
 
 
-
     private fun filterInvoices(text: String) {
+        val dateFormat = SimpleDateFormat("MM/dd/yyyy hh:mm a", Locale.US)
         val filteredList = invoiceList.filter {
             it.customerName.contains(text, ignoreCase = true) ||
-                    it.date.contains(text, ignoreCase = true)
+                    dateFormat.format(it.date).contains(text, ignoreCase = true)
         }
         adapter.updateList(filteredList)
     }
@@ -170,13 +169,11 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
     private fun deleteInvoice(invoice: Invoice) {
         val detailsRef = db.collection("invoices").document(invoice.id).collection("invoiceDetails")
 
-        // Eliminar todos los detalles primero
         detailsRef.get().addOnSuccessListener { snapshot ->
             for (doc in snapshot.documents) {
                 doc.reference.delete()
             }
 
-            // Luego eliminar la factura principal
             db.collection("invoices").document(invoice.id)
                 .delete()
                 .addOnSuccessListener {

@@ -18,6 +18,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.math.max
 
 class GeneratePdfActivity : AppCompatActivity() {
 
@@ -106,41 +107,36 @@ class GeneratePdfActivity : AppCompatActivity() {
         products: List<Triple<String, Double, Int>>
     ) {
         val pageWidth = 400
-        val notesWidth = 300 // ancho para forzar wrap
-        val notesText = notes.ifEmpty {
-            "No notes."
-        }
+        val notesWidth = 300
+        val notesText = notes.ifEmpty { "No notes." }
 
         val notesTextPaint = TextPaint().apply {
             isAntiAlias = true
             color = Color.BLACK
-            textSize = 12f // tamaño de texto visible
+            textSize = 12f
             typeface = Typeface.DEFAULT
         }
 
         val staticLayoutNotes = createStaticLayout(notesText, notesTextPaint, notesWidth)
         val notesHeight = staticLayoutNotes.height
 
-        val pageHeight = 750 + (products.size * 35) + notesHeight + 60
-
         val pdfDocument = PdfDocument()
-        val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create()
+        val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, 1200, 1).create()
         val page = pdfDocument.startPage(pageInfo)
         val canvas = page.canvas
         val paint = Paint()
 
-        // Marca de agua
+        // -------- Watermark --------
         val logo = BitmapFactory.decodeResource(resources, R.drawable.logo1)
         val scaledWatermark = Bitmap.createScaledBitmap(logo, 300, 300, false)
-        val watermarkPaint = Paint()
-        watermarkPaint.alpha = 30
+        val watermarkPaint = Paint().apply { alpha = 30 }
         val watermarkX = (pageWidth - scaledWatermark.width) / 2f
-        val watermarkY = (pageHeight - scaledWatermark.height) / 2f
+        val watermarkY = (pageInfo.pageHeight - scaledWatermark.height) / 2f
         canvas.drawBitmap(scaledWatermark, watermarkX, watermarkY, watermarkPaint)
 
         var yPosition = 40f
 
-        // Título
+        // -------- Título --------
         paint.textAlign = Paint.Align.CENTER
         paint.typeface = Typeface.create(Typeface.DEFAULT_BOLD, Typeface.BOLD_ITALIC)
         paint.textSize = 22f
@@ -152,7 +148,7 @@ class GeneratePdfActivity : AppCompatActivity() {
 
         yPosition += 40f
 
-        // Fecha
+        // -------- Fecha --------
         paint.color = Color.BLACK
         paint.textAlign = Paint.Align.CENTER
         paint.textSize = 12f
@@ -168,7 +164,7 @@ class GeneratePdfActivity : AppCompatActivity() {
 
         yPosition += 25f
 
-        // Datos cliente
+        // -------- Datos Cliente --------
         val billToX = (pageWidth / 2f) - 15f
         val boxHeight = 20f
         paint.color = Color.parseColor("#8AB6B6")
@@ -193,39 +189,66 @@ class GeneratePdfActivity : AppCompatActivity() {
 
         yPosition += 30f
 
-        // Encabezado productos
+        // -------- Encabezado tabla --------
+        val headerHeight = 25f
         paint.color = Color.parseColor("#8AB6B6")
-        canvas.drawRect(20f, yPosition, pageWidth - 20f, yPosition + 20f, paint)
+        canvas.drawRect(20f, yPosition, pageWidth - 20f, yPosition + headerHeight, paint)
 
         paint.color = Color.BLACK
         paint.textSize = 10f
         paint.typeface = Typeface.DEFAULT_BOLD
-        paint.textAlign = Paint.Align.LEFT
-        canvas.drawText("Description", 25f, yPosition + 15f, paint)
-        canvas.drawText("Qty", 150f, yPosition + 15f, paint)
-        canvas.drawText("Unit", 200f, yPosition + 15f, paint)
-        paint.textAlign = Paint.Align.RIGHT
-        canvas.drawText("Amount", pageWidth - 25f, yPosition + 15f, paint)
-        yPosition += 35f
 
-        // Productos
+        val headerCenterY = (yPosition + yPosition + headerHeight) / 2f - (paint.descent() + paint.ascent()) / 2f
+        paint.textAlign = Paint.Align.LEFT
+        canvas.drawText("Description", 25f, headerCenterY, paint)
+        canvas.drawText("Qty", 150f, headerCenterY, paint)
+        canvas.drawText("Unit", 200f, headerCenterY, paint)
+        paint.textAlign = Paint.Align.RIGHT
+        canvas.drawText("Amount", pageWidth - 25f, headerCenterY, paint)
+
+        yPosition += headerHeight + 10f
+
+        // -------- Productos --------
+        val descMaxWidth = 110f
+        val rowBaseHeight = 20f
+
         products.forEachIndexed { index, (desc, price, quantity) ->
+            val textPaint = TextPaint().apply {
+                isAntiAlias = true
+                color = Color.BLACK
+                textSize = 10f
+                typeface = Typeface.DEFAULT
+            }
+            val staticLayoutDesc = createStaticLayout(desc, textPaint, descMaxWidth.toInt())
+            val rowHeight = max(rowBaseHeight.toInt(), staticLayoutDesc.height + 10)
+
             if (index % 2 == 1) {
                 paint.color = Color.argb(30, 0, 0, 0)
-                canvas.drawRect(20f, yPosition - 10f, pageWidth - 20f, yPosition + 10f, paint)
+                canvas.drawRect(20f, yPosition, pageWidth - 20f, yPosition + rowHeight, paint)
             }
+
+            // descripción multilínea
+            canvas.save()
+            canvas.translate(25f, yPosition + 5f)
+            staticLayoutDesc.draw(canvas)
+            canvas.restore()
+
+            val centerY = (yPosition + yPosition + rowHeight) / 2f - (paint.descent() + paint.ascent()) / 2f
             paint.color = Color.BLACK
             paint.textAlign = Paint.Align.LEFT
-            paint.typeface = Typeface.DEFAULT
-            canvas.drawText(desc, 25f, yPosition, paint)
-            canvas.drawText(quantity.toString(), 150f, yPosition, paint)
-            canvas.drawText("$%.2f".format(price), 200f, yPosition, paint)
+            canvas.drawText(quantity.toString(), 150f, centerY, paint)
+            canvas.drawText("$%.2f".format(price), 200f, centerY, paint)
             paint.textAlign = Paint.Align.RIGHT
-            canvas.drawText("$%.2f".format(price * quantity), pageWidth - 25f, yPosition, paint)
-            yPosition += 20f
+            canvas.drawText("$%.2f".format(price * quantity), pageWidth - 25f, centerY, paint)
+
+            yPosition += rowHeight
         }
 
-        // Totales
+        // -------- Totales --------
+        val labels = listOf("Total Payment", "Extra Charges", "Total")
+        val maxLabelWidth = labels.maxOf { paint.measureText(it) }
+        val totalRowHeight = 25f
+
         listOf(
             "Total Payment" to (total - extra),
             "Extra Charges" to extra,
@@ -233,29 +256,29 @@ class GeneratePdfActivity : AppCompatActivity() {
         ).forEachIndexed { i, (label, amount) ->
             if ((products.size + i) % 2 == 1) {
                 paint.color = Color.argb(30, 0, 0, 0)
-                canvas.drawRect(20f, yPosition - 10f, pageWidth - 20f, yPosition + 10f, paint)
+                canvas.drawRect(20f, yPosition, pageWidth - 20f, yPosition + totalRowHeight, paint)
             }
+
             paint.color = Color.BLACK
-            paint.textAlign = Paint.Align.LEFT
             paint.typeface = Typeface.DEFAULT_BOLD
-            canvas.drawText(label, 25f, yPosition, paint)
+
+            val centerY = (yPosition + yPosition + totalRowHeight) / 2f - (paint.descent() + paint.ascent()) / 2f
             paint.textAlign = Paint.Align.RIGHT
-            canvas.drawText("$%.2f".format(amount), pageWidth - 25f, yPosition, paint)
-            yPosition += 20f
+            canvas.drawText(label, 25f + maxLabelWidth, centerY, paint)
+            canvas.drawText("$%.2f".format(amount), pageWidth - 25f, centerY, paint)
+
+            yPosition += totalRowHeight
         }
 
-        yPosition += 40f
+        yPosition += 30f
 
-        // Notas con salto de línea dentro de un marco ajustado y sin borde visible
+        // -------- Notas --------
         paint.textAlign = Paint.Align.LEFT
         paint.typeface = Typeface.DEFAULT_BOLD
         paint.textSize = 12f
         paint.color = Color.BLACK
         canvas.drawText("Notes:", 25f, yPosition, paint)
         yPosition += 15f
-
-        paint.style = Paint.Style.FILL
-        paint.color = Color.BLACK
 
         canvas.save()
         canvas.translate(25f, yPosition)
@@ -264,35 +287,30 @@ class GeneratePdfActivity : AppCompatActivity() {
 
         yPosition += notesHeight + 20f
 
-// ================================
-// Fecha de emisión y vencimiento
-// ================================
+        // -------- Fechas emisión y vencimiento --------
         val issueFormatter = SimpleDateFormat("MMMM dd, yyyy", Locale.ENGLISH)
         issueFormatter.timeZone = TimeZone.getTimeZone("America/Mexico_City")
+        val issueDate = issueFormatter.format(date)
 
-        val issueDate = issueFormatter.format(date) // fecha original de la cotización
-        val calendar = Calendar.getInstance()
-        calendar.time = date
-        calendar.add(Calendar.DAY_OF_YEAR, 30)
+        val calendar = Calendar.getInstance().apply {
+            time = date
+            add(Calendar.DAY_OF_YEAR, 30)
+        }
         val expiryDate = issueFormatter.format(calendar.time)
 
         paint.textAlign = Paint.Align.CENTER
         paint.typeface = Typeface.DEFAULT_BOLD
         paint.textSize = 11f
         paint.color = Color.BLACK
-
         canvas.drawText("Issued on: $issueDate", pageWidth / 2f, yPosition, paint)
         yPosition += 15f
         canvas.drawText("Valid until: $expiryDate", pageWidth / 2f, yPosition, paint)
 
         yPosition += 25f
 
-
-// ================================
-// Aviso de validez con fechas explícitas
-// ================================
-        val validityNotice = "This quotation shall remain valid for thirty (30) days from the date of issue. After this period, new quotation must be requested."
-
+        // -------- Aviso validez --------
+        val validityNotice =
+            "This quotation shall remain valid for thirty (30) days from the date of issue. After this period, a new quotation must be requested."
         val noticePaint = TextPaint().apply {
             isAntiAlias = true
             color = Color.BLACK
@@ -306,8 +324,10 @@ class GeneratePdfActivity : AppCompatActivity() {
         canvas.restore()
 
         yPosition += staticLayoutNotice.height + 20f
+
         pdfDocument.finishPage(page)
 
+        // -------- Guardar --------
         val safeName = customerName.replace("[^a-zA-Z0-9]".toRegex(), "").take(15)
         val fileName = "${safeName}_${SimpleDateFormat("ddMMyyyy_HHmmss", Locale("es", "MX")).format(Date())}.pdf"
         val filePath = File(getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), fileName)
@@ -318,6 +338,7 @@ class GeneratePdfActivity : AppCompatActivity() {
         Toast.makeText(this, "PDF saved: ${filePath.absolutePath}", Toast.LENGTH_LONG).show()
         openPDF(filePath)
     }
+
 
     private fun openPDF(file: File) {
         val uri = FileProvider.getUriForFile(this, "$packageName.provider", file)
