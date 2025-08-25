@@ -76,89 +76,84 @@ class QuoteFragment : Fragment(),
         getQuotes()
     }
 
-    /**
-     * Convierte un quote en invoice y elimina el quote.
-     */
-    /**
-     * Convierte un quote en invoice y elimina el quote.
-     */
+    //Convierte un quote en invoice y elimina el quote.
     private fun convertQuoteToInvoice(quote: Quote) {
         val invoiceRef = db.collection("invoices").document()
         val invoiceId = invoiceRef.id
 
-        // Creamos la Invoice SIN productos
-        val invoice = Invoice(
-            id = invoiceId,
-            customerId = quote.customerId,
-            customerName = quote.customerName,
-            customerAddress = quote.customerAddress,
-            date = quote.date,
-            extraCharges = quote.extraCharges,
-            notes = quote.notes,
-            total = quote.total
+        // Convertimos la fecha de string a Date
+        val formatter = SimpleDateFormat("MM/dd/yyyy hh:mm a", Locale.US)
+        formatter.timeZone = TimeZone.getTimeZone("America/Mexico_City")
+        val dateTimestamp: Date = try {
+            formatter.parse(quote.date) ?: Date()
+        } catch (e: Exception) {
+            Date()
+        }
+
+        // Creamos la Invoice
+        val invoiceData = hashMapOf(
+            "id" to invoiceId,
+            "customerId" to quote.customerId,
+            "customerName" to quote.customerName,
+            "customerAddress" to quote.customerAddress,
+            "date" to com.google.firebase.Timestamp(dateTimestamp), // 🔹 Timestamp correcto
+            "extraCharges" to quote.extraCharges,
+            "notes" to quote.notes,
+            "total" to quote.total
         )
 
-        // Guardar la Invoice primero
-        invoiceRef.set(invoice)
+        // Guardamos invoice
+        invoiceRef.set(invoiceData)
             .addOnSuccessListener {
-                // Guardar los productos en la subcolección "invoiceDetails"
                 val batch = db.batch()
                 val detailsRef = invoiceRef.collection("invoiceDetails")
 
                 quote.products.forEach { product ->
-                    val detail = InvoiceProductDetail(
-                        productId = product.productId,
-                        name = product.name,
-                        quantity = product.quantity,
-                        price = product.price,
-                        position = product.position
-                    )
                     val detailRef = detailsRef.document()
-                    batch.set(detailRef, detail)
+                    val detailData = hashMapOf(
+                        "productId" to product.productId,
+                        "name" to product.name,
+                        "quantity" to product.quantity,
+                        "price" to product.price,
+                        "position" to product.position
+                    )
+                    batch.set(detailRef, detailData)
                 }
 
-                batch.commit()
-                    .addOnSuccessListener {
-                        // Una vez todo guardado, eliminar el quote original
-                        db.collection("quotes").document(quote.id).delete()
-                            .addOnSuccessListener {
-                                quoteList.remove(quote)
-                                adapter.updateList(quoteList)
-                                Toast.makeText(
-                                    requireContext(),
-                                    "Quote successfully converted to Invoice",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
-                            .addOnFailureListener {
-                                Toast.makeText(
-                                    requireContext(),
-                                    "Invoice created but failed to delete Quote",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
+                // También eliminamos el quote original y sus detalles en el mismo batch
+                val quoteRef = db.collection("quotes").document(quote.id)
+                batch.delete(quoteRef)
+                val quoteDetailsRef = quoteRef.collection("quoteDetails")
+                quoteDetailsRef.get().addOnSuccessListener { detailsSnapshot ->
+                    for (doc in detailsSnapshot.documents) {
+                        batch.delete(doc.reference)
                     }
-                    .addOnFailureListener {
-                        Toast.makeText(
-                            requireContext(),
-                            "Failed to save invoice details",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+
+                    batch.commit()
+                        .addOnSuccessListener {
+                            quoteList.remove(quote)
+                            adapter.updateList(quoteList)
+                            Toast.makeText(
+                                requireContext(),
+                                "Quote successfully converted to Invoice",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        .addOnFailureListener {
+                            Toast.makeText(
+                                requireContext(),
+                                "Failed to save invoice or delete quote",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                }
             }
             .addOnFailureListener {
-                Toast.makeText(
-                    requireContext(),
-                    "Failed to create Invoice",
-                    Toast.LENGTH_SHORT
-                ).show()
+                Toast.makeText(requireContext(), "Failed to create Invoice", Toast.LENGTH_SHORT).show()
             }
     }
 
-
-    /**
-     * Pregunta antes de convertir.
-     */
+    //Pregunta antes de convertir
     private fun confirmConvert(quote: Quote) {
         val alert = androidx.appcompat.app.AlertDialog.Builder(requireContext())
             .setTitle("Convert to Invoice")
@@ -169,9 +164,7 @@ class QuoteFragment : Fragment(),
         alert.show()
     }
 
-    /**
-     * Obtener quotes desde Firestore.
-     */
+    //Obtener quotes desde Firestore
     private fun getQuotes() {
         db.collection("quotes")
             .orderBy("date", com.google.firebase.firestore.Query.Direction.DESCENDING)
