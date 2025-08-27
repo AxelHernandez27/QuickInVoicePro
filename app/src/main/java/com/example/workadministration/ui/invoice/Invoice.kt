@@ -9,6 +9,7 @@ data class Invoice (
     val customerAddress: String = "",
     val date: String = "",
     val extraCharges: Double = 0.0,
+    val totalPurchasePrice: Double = 0.0,
     val notes: String = "",
     val products: List<ProductDetail> = emptyList(),
     val total: Double = 0.0
@@ -17,7 +18,8 @@ data class Invoice (
 data class ProductDetail(
     val productId: String = "",
     val name: String = "",
-    val quantity: Number = 0,
+    val quantity: Int = 0,
     val price: Double = 0.0,
-    val position: Int = 0
+    val position: Int = 0,
+    val purchasePrice: Double = 0.0
 )

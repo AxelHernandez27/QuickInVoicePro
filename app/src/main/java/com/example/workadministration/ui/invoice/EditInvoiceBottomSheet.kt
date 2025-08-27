@@ -41,13 +41,14 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(),
     private lateinit var tvTotalAmount: TextView
     private lateinit var etAdditionalNotes: EditText
     private lateinit var etExtraCharges: EditText
+    private lateinit var etPurchasePriceTotal: EditText
     private lateinit var btnSave: Button
     private lateinit var btnCancel: Button
     private lateinit var btnAddCustomProduct: Button
 
     private lateinit var rvProducts: RecyclerView
     private lateinit var invoiceAdapter: InvoiceProductAdapter
-    private val selectedProductsWithQty = mutableListOf<Pair<Product, Int>>() // productos con cantidad
+    private val selectedProductsWithQty = mutableListOf<Triple<Product, Int, Double>>() // Triple(product, quantity, purchasePrice)
 
     private val db = FirebaseFirestore.getInstance()
     private var allProducts = listOf<Product>()
@@ -55,6 +56,7 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(),
 
     private var selectedCustomer: Customer? = null
     private var subtotal = 0.0
+    private var totalPurchasePrice  = 0.0
     private var extraCharges = 0.0
 
     private var invoiceId: String? = null
@@ -102,6 +104,7 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(),
         tvTotalAmount = view.findViewById(R.id.tvTotalAmount)
         etAdditionalNotes = view.findViewById(R.id.etAdditionalNotes)
         etExtraCharges = view.findViewById(R.id.etExtraCharges)
+        etPurchasePriceTotal = view.findViewById(R.id.etPurchasePriceTotal)
         btnSave = view.findViewById(R.id.btnSave)
         btnCancel = view.findViewById(R.id.btnCancel)
         btnAddCustomProduct = view.findViewById(R.id.btnAddCustomProduct)
@@ -135,17 +138,22 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(),
         invoiceAdapter = InvoiceProductAdapter(
             selectedProductsWithQty,
             onQuantityChanged = { position, newQty ->
-                val (prod, _) = selectedProductsWithQty[position]
-                selectedProductsWithQty[position] = prod to newQty
+                val (product, _, purchasePrice) = selectedProductsWithQty[position]
+                selectedProductsWithQty[position] = Triple(product, newQty, purchasePrice)
                 invoiceAdapter.notifyItemChanged(position)
+                updateTotal()
+            },
+            onPurchasePriceChanged = { position, newPrice ->
+                val (product, qty, _) = selectedProductsWithQty[position]
+                selectedProductsWithQty[position] = Triple(product, qty, newPrice)
                 updateTotal()
             },
             onEditCustomProduct = { productId ->
                 val index = selectedProductsWithQty.indexOfFirst { it.first.id == productId }
                 if (index != -1) {
-                    val product = selectedProductsWithQty[index].first
+                    val (product, qty, purchasePrice) = selectedProductsWithQty[index]
                     showEditCustomProductDialog(product) { updatedProduct ->
-                        selectedProductsWithQty[index] = updatedProduct to selectedProductsWithQty[index].second
+                        selectedProductsWithQty[index] = Triple(updatedProduct, qty, purchasePrice)
                         invoiceAdapter.notifyItemChanged(index)
                         updateTotal()
                     }
@@ -157,7 +165,6 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(),
                 updateTotal()
             }
         )
-
 
         rvProducts.adapter = invoiceAdapter
         rvProducts.layoutManager = LinearLayoutManager(requireContext())
@@ -210,7 +217,8 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(),
                                 price = detailDoc.getDouble("price") ?: 0.0
                             )
                             val quantity = detailDoc.getLong("quantity")?.toInt() ?: 1
-                            selectedProductsWithQty.add(product to quantity)
+                            val purchasePrice = detailDoc.getDouble("purchasePrice") ?: 0.0
+                            selectedProductsWithQty.add(Triple(product, quantity, purchasePrice))
                         }
                         invoiceAdapter.notifyDataSetChanged()
                         updateTotal()
@@ -286,7 +294,7 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(),
                 val name = adapter.getItem(position)
                 val product = allProducts.find { it.name == name }
                 product?.let {
-                    selectedProductsWithQty.add(it to 1)
+                    selectedProductsWithQty.add(Triple(product, 1, product.price))
                     invoiceAdapter.notifyItemInserted(selectedProductsWithQty.size - 1)
                     updateTotal()
                     autoCompleteProduct.setText("")
@@ -318,7 +326,7 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(),
                 val price = etPrice.text.toString().toDoubleOrNull() ?: 0.0
                 if (name.isNotEmpty() && price > 0.0) {
                     val product = Product("custom_${UUID.randomUUID()}", name, price)
-                    selectedProductsWithQty.add(product to 1)
+                    selectedProductsWithQty.add(Triple(product, 1, price))
                     invoiceAdapter.notifyItemInserted(selectedProductsWithQty.size - 1)
                     updateTotal()
                 } else {
@@ -359,9 +367,12 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(),
 
     private fun updateTotal() {
         subtotal = selectedProductsWithQty.sumOf { (product, qty) -> product.price * qty }
+        totalPurchasePrice = selectedProductsWithQty.sumOf { (_, qty, purchasePrice) -> purchasePrice * qty }
         val total = subtotal + extraCharges
+
         tvSubtotalAmount.text = "$%.2f".format(subtotal)
         tvTotalAmount.text = "$%.2f".format(total)
+        etPurchasePriceTotal.setText("%.2f".format(totalPurchasePrice))
     }
 
     private fun updateInvoice() {
@@ -395,11 +406,12 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(),
                         db.collection("invoices").document(id).collection("invoiceDetails")
                     detailsRef.get().addOnSuccessListener { existing ->
                         existing.forEach { it.reference.delete() }
-                        selectedProductsWithQty.forEachIndexed { index, (product, qty) ->
+                        selectedProductsWithQty.forEachIndexed { index, (product, qty, purchasePrice) ->
                             val detail = mapOf(
                                 "productId" to product.id,
                                 "name" to product.name,
                                 "price" to product.price,
+                                "purchasePrice" to purchasePrice,
                                 "quantity" to qty,
                                 "position" to index // ✅ guarda el orden
                             )

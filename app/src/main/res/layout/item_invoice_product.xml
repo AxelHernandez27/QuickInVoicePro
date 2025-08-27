@@ -3,82 +3,118 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
+    android:orientation="vertical"
     android:padding="8dp"
     android:background="#F5F5F5"
-    android:layout_marginBottom="8dp"
-    android:gravity="center_vertical">
+    android:layout_marginBottom="8dp">
 
-    <TextView
-        android:id="@+id/tvProductName"
-        android:layout_width="0dp"
-        android:layout_weight="1"
+    <!-- Fila principal: nombre, precio de venta y cantidad -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Product Name"
-        android:textSize="16sp"
-        android:textColor="#000000" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
-    <TextView
-        android:id="@+id/tvProductPrice"
-        android:layout_width="wrap_content"
+        <TextView
+            android:id="@+id/tvProductName"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="Product Name"
+            android:textSize="16sp"
+            android:textColor="#000000" />
+
+        <TextView
+            android:id="@+id/tvProductPrice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="$0.00"
+            android:textSize="16sp"
+            android:textColor="#444444"
+            android:layout_marginEnd="8dp" />
+
+        <!-- Botón de disminuir -->
+        <Button
+            android:id="@+id/btnDecreaseQuantity"
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+            android:layout_marginEnd="4dp"
+            android:text="−"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:background="@drawable/bg_button_minus" />
+
+        <!-- Cantidad -->
+        <EditText
+            android:id="@+id/EtProductQuantity"
+            android:layout_width="40dp"
+            android:layout_height="35dp"
+            android:layout_marginEnd="4dp"
+            android:gravity="center"
+            android:inputType="number"
+            android:text="1"
+            android:background="@drawable/bg_quantity_input"
+            android:textColor="#000000" />
+
+        <!-- Botón de aumentar -->
+        <Button
+            android:id="@+id/btnIncreaseQuantity"
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+            android:layout_marginEnd="8dp"
+            android:text="+"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:background="@drawable/bg_button_plus" />
+
+        <ImageButton
+            android:id="@+id/btnEditProduct"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_edit"
+            android:contentDescription="Editar"
+            android:visibility="visible"
+            app:tint="#000000" />
+
+        <!-- Botón eliminar -->
+        <ImageButton
+            android:id="@+id/btnDeleteProduct"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@android:drawable/ic_menu_delete"
+            android:contentDescription="Eliminar"
+            app:tint="#000000" />
+    </LinearLayout>
+
+    <!-- Segunda fila: Precio de compra -->
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="$0.00"
-        android:textSize="16sp"
-        android:textColor="#444444"
-        android:layout_marginEnd="8dp" />
+        android:orientation="horizontal"
+        android:paddingTop="4dp"
+        android:gravity="center">
 
-    <!-- Botón de disminuir -->
-    <Button
-        android:id="@+id/btnDecreaseQuantity"
-        android:layout_width="35dp"
-        android:layout_height="35dp"
-        android:layout_marginEnd="4dp"
-        android:text="−"
-        android:textColor="@android:color/white"
-        android:textSize="18sp"
-        android:background="@drawable/bg_button_minus" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Purchase Price:"
+            android:textSize="16sp"
+            android:textColor="#000000"
+            android:layout_marginEnd="8dp" />
 
-    <!-- Cantidad -->
-    <EditText
-        android:id="@+id/EtProductQuantity"
-        android:layout_width="40dp"
-        android:layout_height="35dp"
-        android:layout_marginEnd="4dp"
-        android:gravity="center"
-        android:inputType="number"
-        android:text="1"
-        android:background="@drawable/bg_quantity_input"
-        android:textColor="#000000" />
-
-    <!-- Botón de aumentar -->
-    <Button
-        android:id="@+id/btnIncreaseQuantity"
-        android:layout_width="35dp"
-        android:layout_height="35dp"
-        android:layout_marginEnd="8dp"
-        android:text="+"
-        android:textColor="@android:color/white"
-        android:textSize="18sp"
-        android:background="@drawable/bg_button_plus" />
-
-    <ImageButton
-        android:id="@+id/btnEditProduct"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_marginEnd="4dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:src="@android:drawable/ic_menu_edit"
-        android:contentDescription="Editar"
-        android:visibility="visible"
-        app:tint="#000000" />
-
-    <!-- Botón eliminar -->
-    <ImageButton
-        android:id="@+id/btnDeleteProduct"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:src="@android:drawable/ic_menu_delete"
-        android:contentDescription="Eliminar"
-        app:tint="#000000" />
+        <EditText
+            android:id="@+id/etPurchasePrice"
+            android:layout_width="120dp"
+            android:layout_height="wrap_content"
+            android:hint="$0.00"
+            android:inputType="numberDecimal"
+            android:gravity="center"
+            android:background="@drawable/bg_quantity_input"
+            android:padding="6dp"
+            android:textSize="16sp"
+            android:textColor="#000000" />
+    </LinearLayout>
 </LinearLayout>

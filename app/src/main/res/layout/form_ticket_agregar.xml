@@ -148,6 +148,25 @@
             android:textColorHint="#999999"
             android:layout_marginBottom="16dp"/>
 
+        <!-- Purchase Price (Total Invoice Level) -->
+        <TextView
+            android:id="@+id/tvPurchasePriceLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Total Purchase Price:"/>
+
+        <EditText
+            android:id="@+id/etPurchasePriceTotal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="numberDecimal"
+            android:background="@drawable/input_background"
+            android:padding="12dp"
+            android:textColor="#000000"
+            android:textColorHint="#999999"
+            android:layout_marginBottom="16dp"/>
+
+
         <!-- Notes -->
         <EditText
             android:id="@+id/etAdditionalNotes"
