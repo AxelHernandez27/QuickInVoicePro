@@ -1,12 +1,14 @@
 package com.example.workadministration.ui.invoice
 
+import android.app.AlertDialog
 import android.content.Context
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.*
-import androidx.appcompat.app.AlertDialog
 import androidx.core.widget.doOnTextChanged
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -18,6 +20,10 @@ import com.example.workadministration.ui.product.Product
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
+import java.util.Calendar
+import java.util.Collections
+import java.util.Date
+import kotlin.Triple
 
 class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomSheet.OnCustomerAddedListener {
 
@@ -27,10 +33,7 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
 
     private lateinit var recyclerViewProducts: RecyclerView
     private lateinit var invoiceProductAdapter: InvoiceProductAdapter
-    // Ahora almacenamos también purchasePrice en cada producto
-    private val selectedProductsList = mutableListOf<Triple<Product, Int, Double>>()
-    // (producto, cantidad, purchasePrice)
-
+    private val selectedProductsList = mutableListOf<Triple<Product, Int, Double>>() // (producto, cantidad, purchasePrice)
     private lateinit var listener: OnInvoiceSavedListener
     private lateinit var customerAdapter: ArrayAdapter<String>
 
@@ -53,24 +56,17 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
     private var extraCharges = 0.0
     private var totalPurchasePrice = 0.0
 
+    private lateinit var purchasePriceWatcher: TextWatcher
+
     override fun onAttach(context: Context) {
         super.onAttach(context)
-        if (context is OnInvoiceSavedListener) {
-            listener = context
-        } else {
-            throw RuntimeException("$context must implement OnInvoiceSavedListener")
-        }
+        if (context is OnInvoiceSavedListener) listener = context
+        else throw RuntimeException("$context must implement OnInvoiceSavedListener")
     }
 
     override fun onStart() {
         super.onStart()
-        val bottomSheet = dialog?.findViewById<View>(
-            com.google
-                .android
-                .material
-                .R
-                .id
-                .design_bottom_sheet)
+        val bottomSheet = dialog?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
         bottomSheet?.let {
             val behavior = com.google.android.material.bottomsheet.BottomSheetBehavior.from(it)
             behavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
@@ -92,9 +88,7 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
         etPurchasePriceTotal = view.findViewById(R.id.etPurchasePriceTotal)
         btnSave = view.findViewById(R.id.btnSave)
         btnCancel = view.findViewById(R.id.btnCancel)
-        view.findViewById<Button>(R.id.btnAddCustomProduct).setOnClickListener {
-            showAddCustomProductDialog()
-        }
+        view.findViewById<Button>(R.id.btnAddCustomProduct).setOnClickListener { showAddCustomProductDialog() }
 
         loadClients()
         loadProducts()
@@ -112,16 +106,25 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
             updateTotal()
         }
 
-        etPurchasePriceTotal.doOnTextChanged { text, _, _, _ ->
-            totalPurchasePrice = text.toString().toDoubleOrNull() ?: 0.0
+        purchasePriceWatcher = object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+                val newTotal = s.toString().toDoubleOrNull() ?: 0.0
+                if (newTotal != totalPurchasePrice) totalPurchasePrice = newTotal
+            }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         }
-
+        etPurchasePriceTotal.addTextChangedListener(purchasePriceWatcher)
 
         recyclerViewProducts.layoutManager = LinearLayoutManager(requireContext())
         invoiceProductAdapter = InvoiceProductAdapter(
             selectedProductsList,
             onQuantityChanged = { _, _ -> updateTotal() },
-            onPurchasePriceChanged = { _, _ -> updateTotal() }, // 👈 NUEVO callback
+            onPurchasePriceChanged = { position, newPrice ->
+                val (product, qty, _) = selectedProductsList[position]
+                selectedProductsList[position] = Triple(product, qty, newPrice)
+                updateTotal()
+            },
             onEditCustomProduct = { productId -> showEditCustomProductDialog(productId) },
             onDeleteProduct = { position ->
                 selectedProductsList.removeAt(position)
@@ -129,43 +132,9 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
                 updateTotal()
             }
         )
-
         recyclerViewProducts.adapter = invoiceProductAdapter
-        (recyclerViewProducts.itemAnimator as? androidx.recyclerview.widget.SimpleItemAnimator)?.supportsChangeAnimations = false
 
-        // Drag & Drop
-        val itemTouchHelperCallback = object : ItemTouchHelper.Callback() {
-            override fun getMovementFlags(
-                recyclerView: RecyclerView,
-                viewHolder: RecyclerView.ViewHolder
-            ): Int {
-                val dragFlags = ItemTouchHelper.UP or ItemTouchHelper.DOWN
-                return makeMovementFlags(dragFlags, 0)
-            }
-
-            override fun onSelectedChanged(viewHolder: RecyclerView.ViewHolder?, actionState: Int) {
-                if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
-                    viewHolder?.itemView?.clearFocus()
-                }
-                super.onSelectedChanged(viewHolder, actionState)
-            }
-
-            override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
-                val fromPosition = viewHolder.adapterPosition
-                val toPosition = target.adapterPosition
-                invoiceProductAdapter.moveItem(fromPosition, toPosition)
-                return true
-            }
-
-            override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
-                super.clearView(recyclerView, viewHolder)
-                recyclerView.adapter?.notifyDataSetChanged()
-            }
-
-            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {}
-            override fun isLongPressDragEnabled(): Boolean = true
-        }
-        ItemTouchHelper(itemTouchHelperCallback).attachToRecyclerView(recyclerViewProducts)
+        setupDragAndDrop()
 
         btnSave.setOnClickListener { saveInvoice() }
         btnCancel.setOnClickListener { dismiss() }
@@ -178,23 +147,13 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
             allCustomers = documents.map { it.toObject(Customer::class.java).copy(id = it.id) }
             val names = allCustomers.map { it.fullname }
 
-            customerAdapter = ArrayAdapter(
-                requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
-                names
-            )
+            customerAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, names)
             autoCompleteClient.setAdapter(customerAdapter)
-            autoCompleteClient.threshold = 1 // ⬅️ Mostrar desde 1 letra
+            autoCompleteClient.threshold = 1
 
-            // Mostrar dropdown al enfocar
-            autoCompleteClient.setOnFocusChangeListener { _, hasFocus ->
-                if (hasFocus) autoCompleteClient.showDropDown()
-            }
-
-            // Mostrar dropdown al hacer click
+            autoCompleteClient.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) autoCompleteClient.showDropDown() }
             autoCompleteClient.setOnClickListener { autoCompleteClient.showDropDown() }
 
-            // Selección de cliente
             autoCompleteClient.setOnItemClickListener { _, _, position, _ ->
                 val name = customerAdapter.getItem(position)
                 selectedCustomer = allCustomers.find { it.fullname == name }
@@ -207,49 +166,87 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
         db.collection("products").get().addOnSuccessListener { documents ->
             allProducts = documents.map { it.toObject(Product::class.java).copy(id = it.id) }
             val productNames = allProducts.map { it.name }
-            val productAdapter = ArrayAdapter(
-                requireContext(),
-                android.R.layout.simple_dropdown_item_1line,
-                productNames
-            )
+            val productAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, productNames)
             autoCompleteProduct.setAdapter(productAdapter)
-            autoCompleteProduct.threshold = 1 // ⬅️ Mostrar desde 1 letra
+            autoCompleteProduct.threshold = 1
 
-            // Mostrar dropdown al enfocar
-            autoCompleteProduct.setOnFocusChangeListener { _, hasFocus ->
-                if (hasFocus) autoCompleteProduct.showDropDown()
-            }
-
-            // Mostrar dropdown al hacer click
+            autoCompleteProduct.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) autoCompleteProduct.showDropDown() }
             autoCompleteProduct.setOnClickListener { autoCompleteProduct.showDropDown() }
 
-            // Selección de producto
             autoCompleteProduct.setOnItemClickListener { _, _, position, _ ->
                 val name = productAdapter.getItem(position)
                 val product = allProducts.find { it.name == name }
                 product?.let {
-                    selectedProductsList.add(Triple(it, 1, 0.0))
-                    invoiceProductAdapter.notifyItemInserted(selectedProductsList.size - 1)
+                    // Verificar si ya está en la lista
+                    val existingIndex = selectedProductsList.indexOfFirst { it.first.id == product.id }
+                    if (existingIndex != -1) {
+                        // Si existe, aumentar cantidad en 1
+                        val (prod, qty, purchasePrice) = selectedProductsList[existingIndex]
+                        selectedProductsList[existingIndex] = Triple(prod, qty + 1, purchasePrice)
+                        invoiceProductAdapter.notifyItemChanged(existingIndex)
+                    } else {
+                        // Si no existe, agregar nuevo
+                        selectedProductsList.add(Triple(product, 1, 0.0))
+                        invoiceProductAdapter.notifyItemInserted(selectedProductsList.size - 1)
+                    }
                     updateTotal()
                     autoCompleteProduct.setText("")
                 }
             }
+
         }
     }
 
-    private fun showAddCustomProductDialog() { /* sin cambios */ }
+    private fun showAddCustomProductDialog() {
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_add_custom_product, null)
+        val etName = dialogView.findViewById<EditText>(R.id.etCustomProductName)
+        val etPrice = dialogView.findViewById<EditText>(R.id.etCustomProductPrice)
 
-    private fun showEditCustomProductDialog(productId: String) { /* sin cambios */ }
+        AlertDialog.Builder(requireContext())
+            .setTitle("Customized Product")
+            .setView(dialogView)
+            .setPositiveButton("Add") { _, _ ->
+                val name = etName.text.toString().trim()
+                val price = etPrice.text.toString().toDoubleOrNull()
+
+                if (name.isNotEmpty() && price != null && price > 0) {
+                    val customProduct = Product(id = "custom_${System.currentTimeMillis()}", name = name, price = price)
+                    val index = selectedProductsList.indexOfFirst { it.first.id == customProduct.id }
+                    if (index == -1) {
+                        selectedProductsList.add(Triple(customProduct, 1, 0.0))
+                        invoiceProductAdapter.notifyItemInserted(selectedProductsList.size - 1)
+                        updateTotal()
+                    }
+                } else {
+                    Toast.makeText(requireContext(), "Enter a valid name and price", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showEditCustomProductDialog(productId: String) {
+        val index = selectedProductsList.indexOfFirst { it.first.id == productId }
+        if (index == -1) return
+
+        val (product, quantity) = selectedProductsList[index]
+
+        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_add_custom_product, null)
+        val etName = dialogView.findViewById<EditText>(R.id.etCustomProductName)
+        val etPrice = dialogView.findViewById<EditText>(R.id.etCustomProductPrice)
+        }
 
     private fun updateTotal() {
-        subtotal = selectedProductsList.sumOf { (product, quantity, _) -> product.price * quantity }
-        totalPurchasePrice = selectedProductsList.sumOf { (_, quantity, purchasePrice) -> purchasePrice * quantity }
+        subtotal = selectedProductsList.sumOf { (product, qty, _) -> product.price * qty }
+        totalPurchasePrice = selectedProductsList.sumOf { (_, qty, purchasePrice) -> purchasePrice * qty }
         val total = subtotal + extraCharges
 
         tvSubtotalAmount.text = "$%.2f".format(subtotal)
         tvTotalAmount.text = "$%.2f".format(total)
-        etPurchasePriceTotal.setText("%.2f".format(totalPurchasePrice))
 
+        etPurchasePriceTotal.removeTextChangedListener(purchasePriceWatcher)
+        etPurchasePriceTotal.setText("%.2f".format(totalPurchasePrice))
+        etPurchasePriceTotal.addTextChangedListener(purchasePriceWatcher)
     }
 
     private fun saveInvoice() {
@@ -276,7 +273,7 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
             "extraCharges" to extraCharges,
             "notes" to notes,
             "subtotal" to subtotal,
-            "totalPurchasePrice" to totalPurchasePrice, // 👈 agregado
+            "totalPurchasePrice" to totalPurchasePrice,
             "total" to total
         )
 
@@ -287,13 +284,13 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
                     "productId" to product.id,
                     "name" to product.name,
                     "price" to product.price,
-                    "purchasePrice" to purchasePrice, // 👈 agregado
+                    "purchasePrice" to purchasePrice,
                     "quantity" to quantity,
                     "position" to index
                 )
                 detailsCollection.add(detail)
             }
-
+            updateMonthlyReport(invoiceRef.id, total, totalPurchasePrice, Date())
             Toast.makeText(requireContext(), "Invoice saved successfully", Toast.LENGTH_SHORT).show()
             listener.onInvoiceSaved()
             dismiss()
@@ -302,7 +299,58 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
         }
     }
 
-    override fun onCustomerAdded(customer: Customer) { /* sin cambios */ }
+    private fun updateMonthlyReport(invoiceId: String, invoiceTotal: Double, materialsTotal: Double, invoiceDate: Date) {
+        val calendar = Calendar.getInstance().apply { time = invoiceDate }
+        val year = calendar.get(Calendar.YEAR)
+        val month = calendar.get(Calendar.MONTH) + 1
+        val reportId = "${year}_$month"
+        val reportRef = db.collection("reports").document(reportId)
+
+        db.runTransaction { transaction ->
+            val snapshot = transaction.get(reportRef)
+            val currentTotalTickets = snapshot.getDouble("totalTickets") ?: 0.0
+            val currentTotalMaterials = snapshot.getDouble("totalMaterials") ?: 0.0
+            val currentProfit = snapshot.getDouble("profit") ?: 0.0
+            val newData = mapOf(
+                "year" to year,
+                "month" to month,
+                "totalTickets" to currentTotalTickets + invoiceTotal,
+                "totalMaterials" to currentTotalMaterials + materialsTotal,
+                "profit" to currentProfit + (invoiceTotal - materialsTotal)
+            )
+            transaction.set(reportRef, newData)
+        }
+    }
+
+    override fun onCustomerAdded(customer: Customer) {
+        allCustomers = allCustomers + customer
+        customerAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, allCustomers.map { it.fullname })
+        autoCompleteClient.setAdapter(customerAdapter)
+        selectedCustomer = customer
+        autoCompleteClient.setText(customer.fullname, false)
+        autoCompleteClient.error = null
+        autoCompleteClient.clearFocus()
+        Toast.makeText(requireContext(), "Selected customer: ${customer.fullname}", Toast.LENGTH_SHORT).show()
+    }
+
+    private fun setupDragAndDrop() {
+        val itemTouchHelperCallback = object : ItemTouchHelper.Callback() {
+            override fun getMovementFlags(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
+                val dragFlags = ItemTouchHelper.UP or ItemTouchHelper.DOWN
+                return makeMovementFlags(dragFlags, 0)
+            }
+            override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
+                val from = viewHolder.adapterPosition
+                val to = target.adapterPosition
+                Collections.swap(selectedProductsList, from, to)
+                invoiceProductAdapter.notifyItemMoved(from, to)
+                return true
+            }
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {}
+            override fun isLongPressDragEnabled(): Boolean = true
+        }
+        ItemTouchHelper(itemTouchHelperCallback).attachToRecyclerView(recyclerViewProducts)
+    }
 
     override fun getTheme(): Int = R.style.CustomBottomSheetDialogTheme
 }

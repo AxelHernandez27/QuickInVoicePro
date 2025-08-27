@@ -174,6 +174,10 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
                 doc.reference.delete()
             }
 
+            // Primero actualizar el reporte mensual
+            updateMonthlyReportOnDelete(invoice)
+
+            // Luego eliminar la factura
             db.collection("invoices").document(invoice.id)
                 .delete()
                 .addOnSuccessListener {
@@ -183,6 +187,37 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
                 .addOnFailureListener {
                     Toast.makeText(this, "Error deleting invoice", Toast.LENGTH_SHORT).show()
                 }
+        }
+    }
+
+    // Método para actualizar reporte mensual al eliminar
+    private fun updateMonthlyReportOnDelete(invoice: Invoice) {
+        val calendar = Calendar.getInstance().apply {
+            // Convertir la fecha de string a Date si es necesario
+            time = SimpleDateFormat("MM/dd/yyyy hh:mm a", Locale.US).parse(invoice.date) ?: Date()
+        }
+        val year = calendar.get(Calendar.YEAR)
+        val month = calendar.get(Calendar.MONTH) + 1
+        val reportId = "${year}_$month"
+        val reportRef = db.collection("reports").document(reportId)
+
+        db.runTransaction { transaction ->
+            val snapshot = transaction.get(reportRef)
+            val currentTotalTickets = snapshot.getDouble("totalTickets") ?: 0.0
+            val currentTotalMaterials = snapshot.getDouble("totalMaterials") ?: 0.0
+            val currentProfit = snapshot.getDouble("profit") ?: 0.0
+
+            val newTotalTickets = (currentTotalTickets - invoice.total).coerceAtLeast(0.0)
+            val newTotalMaterials = (currentTotalMaterials - (invoice.products.sumOf { it.price })).coerceAtLeast(0.0)
+            val newProfit = (currentProfit - (invoice.total - invoice.products.sumOf { it.price })).coerceAtLeast(0.0)
+
+            transaction.set(reportRef, mapOf(
+                "year" to year,
+                "month" to month,
+                "totalTickets" to newTotalTickets,
+                "totalMaterials" to newTotalMaterials,
+                "profit" to newProfit
+            ))
         }
     }
 

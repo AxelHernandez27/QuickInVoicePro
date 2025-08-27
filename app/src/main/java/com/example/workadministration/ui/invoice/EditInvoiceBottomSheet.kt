@@ -18,8 +18,10 @@ import com.example.workadministration.ui.product.Product
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import java.util.Calendar
 import java.util.UUID
 import java.util.Collections
+import java.util.Date
 
 class EditInvoiceBottomSheet : BottomSheetDialogFragment(),
     AddCustomerBottomSheet.OnCustomerAddedListener {
@@ -45,6 +47,8 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(),
     private lateinit var btnSave: Button
     private lateinit var btnCancel: Button
     private lateinit var btnAddCustomProduct: Button
+
+    private lateinit var purchasePriceWatcher: TextWatcher
 
     private lateinit var rvProducts: RecyclerView
     private lateinit var invoiceAdapter: InvoiceProductAdapter
@@ -133,6 +137,19 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(),
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
         })
 
+        purchasePriceWatcher = object : TextWatcher {
+            override fun afterTextChanged(s: Editable?) {
+                val newTotal = s.toString().toDoubleOrNull()
+                if (newTotal != null && newTotal != totalPurchasePrice) {
+                    totalPurchasePrice = newTotal
+                }
+            }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        }
+        etPurchasePriceTotal.addTextChangedListener(purchasePriceWatcher)
+
+
         rvProducts = view.findViewById(R.id.rvProducts)
 
         invoiceAdapter = InvoiceProductAdapter(
@@ -158,13 +175,12 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(),
                         updateTotal()
                     }
                 }
-            },
-            onDeleteProduct = { position ->
-                selectedProductsWithQty.removeAt(position)
-                invoiceAdapter.notifyItemRemoved(position)
-                updateTotal()
             }
-        )
+        ) { position ->
+            selectedProductsWithQty.removeAt(position)
+            invoiceAdapter.notifyItemRemoved(position)
+            updateTotal()
+        }
 
         rvProducts.adapter = invoiceAdapter
         rvProducts.layoutManager = LinearLayoutManager(requireContext())
@@ -293,9 +309,18 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(),
             autoCompleteProduct.setOnItemClickListener { _, _, position, _ ->
                 val name = adapter.getItem(position)
                 val product = allProducts.find { it.name == name }
-                product?.let {
-                    selectedProductsWithQty.add(Triple(product, 1, product.price))
-                    invoiceAdapter.notifyItemInserted(selectedProductsWithQty.size - 1)
+                product?.let { p ->
+                    val index = selectedProductsWithQty.indexOfFirst { it.first.id == p.id }
+                    if (index != -1) {
+                        // Producto ya existe → aumentar cantidad en 1
+                        val (prod, qty, purchasePrice) = selectedProductsWithQty[index]
+                        selectedProductsWithQty[index] = Triple(prod, qty + 1, purchasePrice)
+                        invoiceAdapter.notifyItemChanged(index)
+                    } else {
+                        // Producto nuevo
+                        selectedProductsWithQty.add(Triple(p, 1, p.price))
+                        invoiceAdapter.notifyItemInserted(selectedProductsWithQty.size - 1)
+                    }
                     updateTotal()
                     autoCompleteProduct.setText("")
                 }
@@ -355,7 +380,7 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(),
                 val price = etPrice.text.toString().toDoubleOrNull() ?: 0.0
                 if (name.isNotEmpty() && price > 0.0) {
                     val updated = product.copy(name = name, price = price)
-                    onSaved(updated) // ✅ devolvemos un nuevo objeto
+                    onSaved(updated)
                 } else {
                     Toast.makeText(requireContext(), "Invalid data", Toast.LENGTH_SHORT).show()
                 }
@@ -372,7 +397,11 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(),
 
         tvSubtotalAmount.text = "$%.2f".format(subtotal)
         tvTotalAmount.text = "$%.2f".format(total)
+
+        // Actualiza el campo sin disparar recursivamente el TextWatcher
+        etPurchasePriceTotal.removeTextChangedListener(purchasePriceWatcher)
         etPurchasePriceTotal.setText("%.2f".format(totalPurchasePrice))
+        etPurchasePriceTotal.addTextChangedListener(purchasePriceWatcher)
     }
 
     private fun updateInvoice() {
@@ -381,29 +410,33 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(),
             return
         }
         if (selectedProductsWithQty.isEmpty()) {
-            Toast.makeText(requireContext(), "Please add at least one product", Toast.LENGTH_SHORT)
-                .show()
+            Toast.makeText(requireContext(), "Please add at least one product", Toast.LENGTH_SHORT).show()
             return
         }
 
         val notes = etAdditionalNotes.text.toString().trim()
         val total = subtotal + extraCharges
 
-        val invoiceData = mapOf(
-            "customerId" to selectedCustomer!!.id,
-            "customerName" to selectedCustomer!!.fullname,
-            "customerAddress" to selectedCustomer!!.address,
-            "extraCharges" to extraCharges,
-            "notes" to notes,
-            "total" to total
-        )
-
         invoiceId?.let { id ->
-            db.collection("invoices").document(id)
-                .set(invoiceData, SetOptions.merge())
-                .addOnSuccessListener {
-                    val detailsRef =
-                        db.collection("invoices").document(id).collection("invoiceDetails")
+            val invoiceRef = db.collection("invoices").document(id)
+            // Primero obtenemos los valores antiguos
+            invoiceRef.get().addOnSuccessListener { oldDoc ->
+                val oldTotal = oldDoc.getDouble("total") ?: 0.0
+                val oldMaterials = oldDoc.getDouble("totalPurchasePrice") ?: 0.0
+
+                // Ahora guardamos la factura con los nuevos valores
+                val invoiceData = mapOf(
+                    "customerId" to selectedCustomer!!.id,
+                    "customerName" to selectedCustomer!!.fullname,
+                    "customerAddress" to selectedCustomer!!.address,
+                    "extraCharges" to extraCharges,
+                    "totalPurchasePrice" to totalPurchasePrice,
+                    "notes" to notes,
+                    "total" to total
+                )
+
+                invoiceRef.set(invoiceData, SetOptions.merge()).addOnSuccessListener {
+                    val detailsRef = invoiceRef.collection("invoiceDetails")
                     detailsRef.get().addOnSuccessListener { existing ->
                         existing.forEach { it.reference.delete() }
                         selectedProductsWithQty.forEachIndexed { index, (product, qty, purchasePrice) ->
@@ -413,23 +446,58 @@ class EditInvoiceBottomSheet : BottomSheetDialogFragment(),
                                 "price" to product.price,
                                 "purchasePrice" to purchasePrice,
                                 "quantity" to qty,
-                                "position" to index // ✅ guarda el orden
+                                "position" to index
                             )
                             detailsRef.add(detail)
                         }
-                        Toast.makeText(
-                            requireContext(),
-                            "Invoice updated",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        // Actualizamos reporte con valores antiguos y nuevos
+                        updateMonthlyReportOnEdit(id, oldTotal, oldMaterials, total, totalPurchasePrice)
+
+                        Toast.makeText(requireContext(), "Invoice updated", Toast.LENGTH_SHORT).show()
                         listener?.onInvoiceUpdated()
                         dismiss()
                     }
+                }.addOnFailureListener {
+                    Toast.makeText(requireContext(), "Error updating invoice", Toast.LENGTH_SHORT).show()
                 }
-                .addOnFailureListener {
-                    Toast.makeText(requireContext(), "Error updating invoice", Toast.LENGTH_SHORT)
-                        .show()
-                }
+            }
         }
     }
+
+    private fun updateMonthlyReportOnEdit(
+        invoiceId: String,
+        oldTotal: Double,
+        oldMaterials: Double,
+        newInvoiceTotal: Double,
+        newMaterialsTotal: Double
+    ) {
+        val invoiceRef = db.collection("invoices").document(invoiceId)
+        val date = Date() // o la fecha que tengas guardada
+        val calendar = Calendar.getInstance().apply { time = date }
+        val year = calendar.get(Calendar.YEAR)
+        val month = calendar.get(Calendar.MONTH) + 1
+        val reportId = "${year}_$month"
+        val reportRef = db.collection("reports").document(reportId)
+
+        db.runTransaction { transaction ->
+            val snapshot = transaction.get(reportRef)
+            val currentTotalTickets = snapshot.getDouble("totalTickets") ?: 0.0
+            val currentTotalMaterials = snapshot.getDouble("totalMaterials") ?: 0.0
+            val currentProfit = snapshot.getDouble("profit") ?: 0.0
+
+            val newTotalTickets = currentTotalTickets - oldTotal + newInvoiceTotal
+            val newTotalMaterials = currentTotalMaterials - oldMaterials + newMaterialsTotal
+            val newProfit = currentProfit - (oldTotal - oldMaterials) + (newInvoiceTotal - newMaterialsTotal)
+
+            transaction.set(reportRef, mapOf(
+                "year" to year,
+                "month" to month,
+                "totalTickets" to newTotalTickets,
+                "totalMaterials" to newTotalMaterials,
+                "profit" to newProfit
+            ))
+        }
+    }
+
+
 }
