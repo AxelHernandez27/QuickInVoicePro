@@ -13,6 +13,7 @@ import com.github.mikephil.charting.data.PieEntry
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.firestore.FirebaseFirestore
 import com.example.workadministration.ui.NavigationUtil
+import com.google.firebase.firestore.DocumentSnapshot
 import java.util.*
 
 class DashboardActivity : AppCompatActivity() {
@@ -37,28 +38,7 @@ class DashboardActivity : AppCompatActivity() {
         spMes = findViewById(R.id.spMes)
         spAnio = findViewById(R.id.spAnio)
 
-        loadMonthlyReports { reports ->
-            if (reports.isNotEmpty()) {
-                setupSpinners(reports)
-                setupListeners(reports)
-
-                // Selecciona por defecto el último mes disponible
-                val lastReport = reports.maxByOrNull { it.year * 100 + it.month }!!
-                spAnio.setSelection((spAnio.adapter as ArrayAdapter<Int>).getPosition(lastReport.year))
-                spMes.setSelection(lastReport.month - 1)
-                updatePieChartTickets(lastReport)
-
-                // Actualizar gráfica anual por defecto
-                val yearReports = reports.filter { it.year == lastReport.year }
-                val totalTickets = yearReports.sumOf { it.totalTickets }
-                val totalMaterials = yearReports.sumOf { it.totalMaterials }
-                val profit = yearReports.sumOf { it.profit }
-                updatePieChartAnual(MonthlyReport(lastReport.year, 0, totalTickets, totalMaterials, profit))
-
-            }
-        }
-
-
+        loadMonthlyReportsRealtime()
 
     }
 
@@ -135,19 +115,51 @@ class DashboardActivity : AppCompatActivity() {
         }
     }
 
-    private fun loadMonthlyReports(onComplete: (List<MonthlyReport>) -> Unit) {
+    fun getNumberAsDouble(doc: DocumentSnapshot, field: String): Double {
+        return when {
+            doc.getDouble(field) != null -> doc.getDouble(field)!!
+            doc.getLong(field) != null -> doc.getLong(field)!!.toDouble()
+            else -> 0.0
+        }
+    }
+
+    // 🔹 Ahora usamos snapshotListener en vez de get()
+    private fun loadMonthlyReportsRealtime() {
         db.collection("reports")
-            .get()
-            .addOnSuccessListener { snapshot ->
-                val reports = snapshot.mapNotNull { doc ->
-                    val year = doc.getLong("year")?.toInt() ?: return@mapNotNull null
-                    val month = doc.getLong("month")?.toInt() ?: return@mapNotNull null
-                    val totalTickets = doc.getDouble("totalTickets") ?: 0.0
-                    val totalMaterials = doc.getDouble("totalMaterials") ?: 0.0
-                    val profit = doc.getDouble("profit") ?: 0.0
-                    MonthlyReport(year, month, totalTickets, totalMaterials, profit)
-                }.sortedWith(compareBy({ it.year }, { it.month }))
-                onComplete(reports)
+            .addSnapshotListener { snapshot, e ->
+                if (e != null) {
+                    android.util.Log.w("Dashboard", "Listen failed.", e)
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null && !snapshot.isEmpty) {
+                    val reports = snapshot.mapNotNull { doc ->
+                        val year = doc.getLong("year")?.toInt() ?: return@mapNotNull null
+                        val month = doc.getLong("month")?.toInt() ?: return@mapNotNull null
+                        val profit = getNumberAsDouble(doc, "profit")
+                        val totalTickets = getNumberAsDouble(doc, "totalTickets")
+                        val totalMaterials = getNumberAsDouble(doc, "totalMaterials")
+                        MonthlyReport(year, month, totalTickets, totalMaterials, profit)
+                    }.sortedWith(compareBy({ it.year }, { it.month }))
+
+                    if (reports.isNotEmpty()) {
+                        setupSpinners(reports)
+                        setupListeners(reports)
+
+                        val lastReport = reports.maxByOrNull { it.year * 100 + it.month }!!
+                        spAnio.setSelection((spAnio.adapter as ArrayAdapter<Int>).getPosition(lastReport.year))
+                        spMes.setSelection(lastReport.month - 1)
+                        updatePieChartTickets(lastReport)
+
+                        val yearReports = reports.filter { it.year == lastReport.year }
+                        val totalTickets = yearReports.sumOf { it.totalTickets }
+                        val totalMaterials = yearReports.sumOf { it.totalMaterials }
+                        val profit = yearReports.sumOf { it.profit }
+                        updatePieChartAnual(
+                            MonthlyReport(lastReport.year, 0, totalTickets, totalMaterials, profit)
+                        )
+                    }
+                }
             }
     }
 
