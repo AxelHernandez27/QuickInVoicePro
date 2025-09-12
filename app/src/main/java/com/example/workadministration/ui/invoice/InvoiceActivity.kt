@@ -104,6 +104,7 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
                     val extraCharges = invoiceDoc.getDouble("extraCharges") ?: 0.0
                     val notes = invoiceDoc.getString("notes") ?: ""
                     val total = invoiceDoc.getDouble("total") ?: 0.0
+                    val totalPurchasePrice = invoiceDoc.getDouble("totalPurchasePrice") ?: 0.0
 
                     db.collection("invoices").document(invoiceId)
                         .collection("invoiceDetails")
@@ -126,6 +127,7 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
                                 extraCharges = extraCharges,
                                 notes = notes,
                                 total = total,
+                                totalPurchasePrice = totalPurchasePrice,
                                 products = products
                             )
 
@@ -193,7 +195,6 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
     // Método para actualizar reporte mensual al eliminar
     private fun updateMonthlyReportOnDelete(invoice: Invoice) {
         val calendar = Calendar.getInstance().apply {
-            // Convertir la fecha de string a Date si es necesario
             time = SimpleDateFormat("MM/dd/yyyy hh:mm a", Locale.US).parse(invoice.date) ?: Date()
         }
         val year = calendar.get(Calendar.YEAR)
@@ -201,25 +202,32 @@ class InvoiceActivity : AppCompatActivity(), AddCustomerBottomSheet.OnCustomerAd
         val reportId = "${year}_$month"
         val reportRef = db.collection("reports").document(reportId)
 
+        val totalTickets = invoice.total
+        val totalMaterials = invoice.totalPurchasePrice
+        val profit = totalTickets - totalMaterials
+
         db.runTransaction { transaction ->
             val snapshot = transaction.get(reportRef)
             val currentTotalTickets = snapshot.getDouble("totalTickets") ?: 0.0
             val currentTotalMaterials = snapshot.getDouble("totalMaterials") ?: 0.0
             val currentProfit = snapshot.getDouble("profit") ?: 0.0
 
-            val newTotalTickets = (currentTotalTickets - invoice.total).coerceAtLeast(0.0)
-            val newTotalMaterials = (currentTotalMaterials - (invoice.products.sumOf { it.price })).coerceAtLeast(0.0)
-            val newProfit = (currentProfit - (invoice.total - invoice.products.sumOf { it.price })).coerceAtLeast(0.0)
+            val newTotalTickets = (currentTotalTickets - totalTickets).coerceAtLeast(0.0)
+            val newTotalMaterials = (currentTotalMaterials - totalMaterials).coerceAtLeast(0.0)
+            val newProfit = (currentProfit - profit).coerceAtLeast(0.0)
 
-            transaction.set(reportRef, mapOf(
-                "year" to year,
-                "month" to month,
-                "totalTickets" to newTotalTickets,
-                "totalMaterials" to newTotalMaterials,
-                "profit" to newProfit
-            ))
+            transaction.set(
+                reportRef, mapOf(
+                    "year" to year,
+                    "month" to month,
+                    "totalTickets" to newTotalTickets,
+                    "totalMaterials" to newTotalMaterials,
+                    "profit" to newProfit
+                )
+            )
         }
     }
+
 
     private fun confirmDelete(invoice: Invoice) {
         val alert = androidx.appcompat.app.AlertDialog.Builder(this)

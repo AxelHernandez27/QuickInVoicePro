@@ -65,14 +65,20 @@ class DashboardActivity : AppCompatActivity() {
 
         // Listener del spinner mensual
         spMes.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: android.widget.AdapterView<*>, view: android.view.View?, position: Int, id: Long) {
+            override fun onItemSelected(
+                parent: android.widget.AdapterView<*>,
+                view: android.view.View?,
+                position: Int,
+                id: Long
+            ) {
                 if (!isMesInitialized) {
                     isMesInitialized = true
                     return
                 }
                 val selectedYear = spAnio.selectedItem as Int
                 val selectedMonthIndex = position + 1
-                val monthlyReport = reports.find { it.year == selectedYear && it.month == selectedMonthIndex }
+                val monthlyReport =
+                    reports.find { it.year == selectedYear && it.month == selectedMonthIndex }
 
                 if (monthlyReport != null) {
                     updatePieChartTickets(monthlyReport)
@@ -96,7 +102,12 @@ class DashboardActivity : AppCompatActivity() {
 
         // Listener del spinner anual
         spAnio.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: android.widget.AdapterView<*>, view: android.view.View?, position: Int, id: Long) {
+            override fun onItemSelected(
+                parent: android.widget.AdapterView<*>,
+                view: android.view.View?,
+                position: Int,
+                id: Long
+            ) {
                 if (!isAnioInitialized) {
                     isAnioInitialized = true
                     return
@@ -107,7 +118,15 @@ class DashboardActivity : AppCompatActivity() {
                     val totalTickets = yearReports.sumOf { it.totalTickets }
                     val totalMaterials = yearReports.sumOf { it.totalMaterials }
                     val profit = yearReports.sumOf { it.profit }
-                    updatePieChartAnual(MonthlyReport(selectedYear, 0, totalTickets, totalMaterials, profit))
+                    updatePieChartAnual(
+                        MonthlyReport(
+                            selectedYear,
+                            0,
+                            totalTickets,
+                            totalMaterials,
+                            profit
+                        )
+                    )
                 }
             }
 
@@ -147,7 +166,11 @@ class DashboardActivity : AppCompatActivity() {
                         setupListeners(reports)
 
                         val lastReport = reports.maxByOrNull { it.year * 100 + it.month }!!
-                        spAnio.setSelection((spAnio.adapter as ArrayAdapter<Int>).getPosition(lastReport.year))
+                        spAnio.setSelection(
+                            (spAnio.adapter as ArrayAdapter<Int>).getPosition(
+                                lastReport.year
+                            )
+                        )
                         spMes.setSelection(lastReport.month - 1)
                         updatePieChartTickets(lastReport)
 
@@ -171,13 +194,40 @@ class DashboardActivity : AppCompatActivity() {
         )
 
         val dataSet = PieDataSet(entries, "")
-        dataSet.colors = listOf(Color.BLUE, Color.RED, Color.GREEN)
+        dataSet.colors = listOf(
+            Color.parseColor("#4A90E2"), // azul suave
+            Color.parseColor("#E26A6A"), // rojo suave
+            Color.parseColor("#7ED321")  // verde suave
+        )
+        dataSet.setDrawValues(true)
+
         val data = PieData(dataSet)
         data.setValueTextColor(Color.WHITE)
-        data.setValueTextSize(14f)
+        data.setValueTextSize(12f) // texto un poco más pequeño
+        data.setValueTypeface(android.graphics.Typeface.DEFAULT_BOLD)
 
         pieChartTickets.data = data
-        pieChartTickets.centerText = "Summary Last Month"
+        pieChartTickets.centerText = "Monthly Summary"
+        pieChartTickets.setDrawEntryLabels(false) // quitar texto dentro del gráfico
+
+        // Configurar leyenda
+        val legend = pieChartTickets.legend
+        legend.isEnabled = true
+        legend.textSize = 11f
+        legend.form = com.github.mikephil.charting.components.Legend.LegendForm.CIRCLE
+        legend.formSize = 8f
+        legend.horizontalAlignment =
+            com.github.mikephil.charting.components.Legend.LegendHorizontalAlignment.CENTER
+        legend.verticalAlignment =
+            com.github.mikephil.charting.components.Legend.LegendVerticalAlignment.BOTTOM
+        legend.orientation =
+            com.github.mikephil.charting.components.Legend.LegendOrientation.HORIZONTAL
+        legend.setDrawInside(false)
+        legend.isWordWrapEnabled = true
+        legend.xEntrySpace = 10f // espacio horizontal entre entradas
+        legend.yEntrySpace = 4f  // espacio vertical entre filas
+        legend.yOffset = 10f      // margen extra desde el gráfico
+
         pieChartTickets.description.isEnabled = false
         pieChartTickets.animateY(1000)
         pieChartTickets.invalidate()
@@ -191,24 +241,49 @@ class DashboardActivity : AppCompatActivity() {
         )
 
         val dataSet = PieDataSet(entries, "")
-        dataSet.colors = listOf(Color.BLUE, Color.RED, Color.GREEN)
+        dataSet.colors = listOf(
+            Color.parseColor("#4A90E2"), // azul suave
+            Color.parseColor("#E26A6A"), // rojo suave
+            Color.parseColor("#7ED321")  // verde suave
+        )
+        dataSet.setDrawValues(true)
+
         val data = PieData(dataSet)
-        data.setValueTextColor(Color.WHITE)
-        data.setValueTextSize(14f)
+        data.setValueTextColor(Color.WHITE) // números en blanco
+        data.setValueTextSize(12f)          // tamaño igual al mensual
+        data.setValueTypeface(android.graphics.Typeface.DEFAULT_BOLD)
 
         pieChartAnual.data = data
         pieChartAnual.centerText = "Annual Summary"
+        pieChartAnual.setDrawEntryLabels(false) // quitar texto dentro del gráfico
+
+        val legend = pieChartAnual.legend
+        legend.isEnabled = true
+        legend.textSize = 11f
+        legend.form = com.github.mikephil.charting.components.Legend.LegendForm.CIRCLE
+        legend.formSize = 8f
+        legend.horizontalAlignment =
+            com.github.mikephil.charting.components.Legend.LegendHorizontalAlignment.CENTER
+        legend.verticalAlignment =
+            com.github.mikephil.charting.components.Legend.LegendVerticalAlignment.BOTTOM
+        legend.orientation =
+            com.github.mikephil.charting.components.Legend.LegendOrientation.HORIZONTAL
+        legend.setDrawInside(false)
+        legend.isWordWrapEnabled = true
+        legend.xEntrySpace = 10f
+        legend.yEntrySpace = 4f
+        legend.yOffset = 10f
+
         pieChartAnual.description.isEnabled = false
         pieChartAnual.animateY(1000)
         pieChartAnual.invalidate()
     }
 }
 
-
 data class MonthlyReport(
     val year: Int,
     val month: Int,
     val totalTickets: Double,
     val totalMaterials: Double,
-    val profit: Double
+   val profit: Double
 )

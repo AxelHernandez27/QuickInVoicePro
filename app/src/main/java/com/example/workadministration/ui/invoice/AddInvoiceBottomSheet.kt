@@ -177,15 +177,12 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
                 val name = productAdapter.getItem(position)
                 val product = allProducts.find { it.name == name }
                 product?.let {
-                    // Verificar si ya está en la lista
                     val existingIndex = selectedProductsList.indexOfFirst { it.first.id == product.id }
                     if (existingIndex != -1) {
-                        // Si existe, aumentar cantidad en 1
                         val (prod, qty, purchasePrice) = selectedProductsList[existingIndex]
                         selectedProductsList[existingIndex] = Triple(prod, qty + 1, purchasePrice)
                         invoiceProductAdapter.notifyItemChanged(existingIndex)
                     } else {
-                        // Si no existe, agregar nuevo
                         selectedProductsList.add(Triple(product, 1, 0.0))
                         invoiceProductAdapter.notifyItemInserted(selectedProductsList.size - 1)
                     }
@@ -229,12 +226,33 @@ class AddInvoiceBottomSheet : BottomSheetDialogFragment(), AddCustomerBottomShee
         val index = selectedProductsList.indexOfFirst { it.first.id == productId }
         if (index == -1) return
 
-        val (product, quantity) = selectedProductsList[index]
+        val (product, quantity, purchasePrice) = selectedProductsList[index]
 
         val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_add_custom_product, null)
         val etName = dialogView.findViewById<EditText>(R.id.etCustomProductName)
         val etPrice = dialogView.findViewById<EditText>(R.id.etCustomProductPrice)
-        }
+
+        etName.setText(product.name)
+        etPrice.setText(product.price.toString())
+
+        AlertDialog.Builder(requireContext())
+            .setTitle("Edit Customized Product")
+            .setView(dialogView)
+            .setPositiveButton("Save") { _, _ ->
+                val newName = etName.text.toString().trim()
+                val newPrice = etPrice.text.toString().toDoubleOrNull()
+                if (newName.isNotEmpty() && newPrice != null && newPrice > 0) {
+                    val updatedProduct = product.copy(name = newName, price = newPrice)
+                    selectedProductsList[index] = Triple(updatedProduct, quantity, purchasePrice)
+                    invoiceProductAdapter.notifyItemChanged(index)
+                    updateTotal()
+                } else {
+                    Toast.makeText(requireContext(), "Enter a valid name and price", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
 
     private fun updateTotal() {
         subtotal = selectedProductsList.sumOf { (product, qty, _) -> product.price * qty }
