@@ -79,6 +79,10 @@ class AddCustomerBottomSheet(
                 return@setOnClickListener
             }
 
+            // ✅ Deshabilitar el botón al iniciar el guardado
+            btnSave.isEnabled = false
+            btnSave.text = "Saving..."
+
             // Save directly, no confirmation dialog
             val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
             val newCustomerRef = db.collection("customers").document()
